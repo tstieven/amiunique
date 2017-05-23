@@ -3,6 +3,20 @@ package models;
 import java.util.HashMap;
 import java.sql.Timestamp;
 
+import com.mongodb.BasicDBObject;
+import com.mongodb.BulkWriteOperation;
+import com.mongodb.BulkWriteResult;
+import com.mongodb.Cursor;
+import com.mongodb.DB;
+import com.mongodb.DBCollection;
+import com.mongodb.DBCursor;
+import com.mongodb.DBObject;
+import com.mongodb.MongoClient;
+import com.mongodb.ParallelScanOptions;
+import com.mongodb.ServerAddress;
+import com.mongodb.MongoException;
+import com.mongodb.WriteConcern;
+import com.mongodb.MongoCredential;
 
 public class Stats{
 
@@ -10,7 +24,7 @@ public class Stats{
     private CounterMap timezone;
     private HashMap<String, VersionMap> browsers;
     private HashMap<String, VersionMap> os;
-    private VersionMap languages;
+    public VersionMap languages;
     private RangeMap nbFonts;
 
     public Integer getNbTotal() {
@@ -36,16 +50,20 @@ public class Stats{
     public RangeMap getNbFonts() {
         return nbFonts;
     }
+   
 
-    private Stats(){
+    public Stats(DBCollection coll){
+        FingerprintManager fpm = new FingerprintManager();
         FpDataEntityManager em = new FpDataEntityManager();
         this.nbTotal = em.getNumberOfEntries();
         this.timezone = em.getTimezoneStats();
         HashMap<String,HashMap<String, VersionMap>> resMap = em.getOSBrowserStats();
         this.browsers = resMap.get("browsers");
         this.os = resMap.get("os");
-        this.languages = em.getLanguageStats();
         this.nbFonts = em.getFontsStats();
+        //Mongo
+        this.languages = fpm.getLanguageStats(coll);
+       
     }
 
     public Stats(Timestamp tsl, Timestamp tsu){
@@ -59,10 +77,14 @@ public class Stats{
         this.nbFonts = em.getFontsStatsSinceDate(tsl, tsu);
     }
 
-    private static Stats INSTANCE = new Stats();
+   /* private static Stats INSTANCE = new Stats(DBCollection coll);
 
     public static Stats getInstance(){
         return INSTANCE;
+    }*/
+    
+    public void addLanguage(ParsedFP fp){
+      languages.add(fp.getLanguage());  
     }
 
     public void addFingerprint(ParsedFP fp){

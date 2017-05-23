@@ -20,6 +20,20 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Map;
 
+import com.mongodb.BasicDBObject;
+import com.mongodb.BulkWriteOperation;
+import com.mongodb.BulkWriteResult;
+import com.mongodb.Cursor;
+import com.mongodb.DB;
+import com.mongodb.DBCollection;
+import com.mongodb.DBCursor;
+import com.mongodb.DBObject;
+import com.mongodb.MongoClient;
+import com.mongodb.ParallelScanOptions;
+import com.mongodb.ServerAddress;
+import com.mongodb.MongoException;
+import com.mongodb.WriteConcern;
+import com.mongodb.MongoCredential;
 
 public class StatsController extends Controller{
 
@@ -76,9 +90,9 @@ public class StatsController extends Controller{
         }
     }
 
-    public static Result stats() throws Exception{
+    public static Result stats(DBCollection coll) throws Exception{
         return ok(Cache.getOrElse("stats-html", () -> {
-            Stats s = Stats.getInstance();
+            Stats s = new Stats(coll);
             return stats.render(s.getNbTotal(),Json.toJson(s.getTimezone()),Json.toJson(s.getBrowsers()),
                     Json.toJson(s.getOs()),Json.toJson(s.getLanguages()),Json.toJson(s.getNbFonts()),"","","");
         }, 1800));

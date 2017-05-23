@@ -21,6 +21,29 @@ import java.time.temporal.ChronoUnit;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
+import java.util.List;
+import java.util.Set;
+import java.util.Arrays;
+
+import com.mongodb.BasicDBObject;
+import com.mongodb.BulkWriteOperation;
+import com.mongodb.BulkWriteResult;
+import com.mongodb.Cursor;
+import com.mongodb.DB;
+import com.mongodb.DBCollection;
+import com.mongodb.DBCursor;
+import com.mongodb.DBObject;
+import com.mongodb.MongoClient;
+import com.mongodb.ParallelScanOptions;
+import com.mongodb.ServerAddress;
+import com.mongodb.MongoException;
+import com.mongodb.WriteConcern;
+import com.mongodb.MongoCredential;
+
+import static java.util.concurrent.TimeUnit.SECONDS;
+
+import java.io.File;
+import java.util.Iterator;
 
 
 public class FPController extends Controller{
@@ -58,6 +81,12 @@ public class FPController extends Controller{
         } else {
             id = cookie.value();
         }
+
+        //MongoDb's part
+        boolean newFpm;
+        FingerprintManager fpc = new FingerprintManager();
+        DBCollection collection = fpc.connection();
+        Fingerprint fpmongo;
 
         FpDataEntityManager em = new FpDataEntityManager();
         CombinationStatsEntityManager emc = new CombinationStatsEntityManager();
@@ -127,7 +156,8 @@ public class FPController extends Controller{
         JsonNode json = (JsonNode) node;
 
         //Get the stats instance
-        Stats s = Stats.getInstance();
+        //Stats s = Stats.getInstance();
+        Stats s = new Stats(collection);
         if(newFp) {
             //Add the newly parsed FP to the stats
             s.addFingerprint(parsedFP);
@@ -170,7 +200,17 @@ public class FPController extends Controller{
                 Json.toJson(browsersMap), Json.toJson(langMap), nbTotal, nbIdent));
     }
 
+
+
+
+
+
+
+
+
     public static Result addFingerprint() {
+         
+    
         Http.Cookie cookie = request().cookies().get("amiunique");
         String id;
         if(cookie == null){
@@ -184,24 +224,56 @@ public class FPController extends Controller{
         FpDataEntityManager em = new FpDataEntityManager();
         CombinationStatsEntityManager emc = new CombinationStatsEntityManager();
         FpDataEntity fp;
-        boolean newFp;
+
+
+
+
+
+        //MongoDb's part
+        FingerprintManager fpm = new FingerprintManager();
+        DBCollection collection = fpm.connection();
+        Fingerprint fpmongo;
+        
+        Main main = new Main();
+        main.addFingerprint();
+        
+
+        /*Iterator it=main.configHashMap.entrySet().iterator();
+        while (it.hasNext()) {
+            Map.Entry pair = (Map.Entry)it.next();
+            System.out.println(pair.getKey()+ " : " +((String[])pair.getValue())[0] );
+        }*/
+          //test
+        
 
         String pluginsJsHashed = DigestUtils.sha1Hex(getAttribute(json,"pluginsJs"));
         String canvasJsHashed = DigestUtils.sha1Hex(getAttribute(json,"canvasJs"));
         String webGLJsHashed = DigestUtils.sha1Hex(getAttribute(json,"webGLJs"));
         String fontsFlashHashed = DigestUtils.sha1Hex(getAttribute(json,"fontsFlash"));
 
-        if(!id.equals("Not supported") && em.checkIfFPExists(id,getAttribute(json,"userAgentHttp"),
+        //Mongo's part
+        boolean a=(/*!id.equals("Not supported") && */fpm.checkIfFPExists(id,getAttribute(json,"userAgentHttp"),
                 getAttribute(json,"acceptHttp"),getAttribute(json,"encodingHttp"), getAttribute(json,"languageHttp"),
                 pluginsJsHashed, getAttribute(json,"platformJs"), getAttribute(json,"cookiesJs"),
                 getAttribute(json,"dntJs"), getAttribute(json,"timezoneJs"), getAttribute(json,"resolutionJs"),
                 getAttribute(json,"localJs"), getAttribute(json,"sessionJs"), getAttribute(json,"IEDataJs"),
                 canvasJsHashed, webGLJsHashed, fontsFlashHashed,
                 getAttribute(json,"resolutionFlash"), getAttribute(json,"languageFlash"), getAttribute(json,"platformFlash"),
-                getAttribute(json,"adBlock"))){
+                getAttribute(json,"adBlock")));
+        System.out.println(a);
 
-                fp = em.getExistingFPById(id);
-                newFp = false;
+        if(a){
+
+                    fpm.oneUp(id,getAttribute(json,"userAgentHttp"),getAttribute(json,"acceptHttp"),getAttribute(json,"encodingHttp"),
+                                    getAttribute(json,"languageHttp"),pluginsJsHashed ,
+                                    getAttribute(json,"platformJs") ,getAttribute(json,"cookiesJs"),
+                                    getAttribute(json,"dntJs"), getAttribute(json,"timezoneJs"), getAttribute(json,"resolutionJs"),
+                                    getAttribute(json,"localJs"), getAttribute(json,"sessionJs"), getAttribute(json,"IEDataJs"),
+                                    canvasJsHashed,webGLJsHashed, fontsFlashHashed,
+                                    getAttribute(json,"resolutionFlash"), getAttribute(json,"languageFlash"), getAttribute(json,"platformFlash"),
+                                    getAttribute(json,"adBlock"));
+                    fpmongo=fpm.getExistingFPById(id);
+               
         } else {
             LocalDateTime time = LocalDateTime.now();
             time = time.truncatedTo(ChronoUnit.HOURS);
@@ -213,7 +285,48 @@ public class FPController extends Controller{
                 ip = request().remoteAddress();
             }
 
-            fp = em.createFull(id,
+
+            fpmongo = fpm.createFull(id,
+                    DigestUtils.sha1Hex(ip), Timestamp.valueOf(time), getAttribute(json,"userAgentHttp"),
+                    getAttribute(json,"acceptHttp"), getAttribute(json,"hostHttp"), getAttribute(json,"connectionHttp"),
+                    getAttribute(json,"encodingHttp"), getAttribute(json,"languageHttp"), getAttribute(json,"orderHttp"),
+                    getAttribute(json,"pluginsJs"), getAttribute(json,"platformJs"), getAttribute(json,"cookiesJs"),
+                    getAttribute(json,"dntJs"), getAttribute(json,"timezoneJs"), getAttribute(json,"resolutionJs"),
+                    getAttribute(json,"localJs"), getAttribute(json,"sessionJs"), getAttribute(json,"IEDataJs"),
+                    getAttribute(json,"canvasJs"), getAttribute(json,"webGLJs"), getAttribute(json,"fontsFlash"),
+                    getAttribute(json,"resolutionFlash"), getAttribute(json,"languageFlash"), getAttribute(json,"platformFlash"),
+                    getAttribute(json,"adBlock"), getAttribute(json,"vendorWebGLJs"),getAttribute(json,"rendererWebGLJs"), "", "",
+                    pluginsJsHashed, canvasJsHashed, webGLJsHashed, fontsFlashHashed);
+
+            fpmongo.save(collection);
+            System.out.println("save");
+
+        }
+
+
+        //MySql's part
+        if(!id.equals("Not supported") && em.checkIfFPExists(id,getAttribute(json,"userAgentHttp"),
+                getAttribute(json,"acceptHttp"),getAttribute(json,"encodingHttp"), getAttribute(json,"languageHttp"),
+                pluginsJsHashed, getAttribute(json,"platformJs"), getAttribute(json,"cookiesJs"),
+                getAttribute(json,"dntJs"), getAttribute(json,"timezoneJs"), getAttribute(json,"resolutionJs"),
+                getAttribute(json,"localJs"), getAttribute(json,"sessionJs"), getAttribute(json,"IEDataJs"),
+                canvasJsHashed, webGLJsHashed, fontsFlashHashed,
+                getAttribute(json,"resolutionFlash"), getAttribute(json,"languageFlash"), getAttribute(json,"platformFlash"),
+                getAttribute(json,"adBlock"))){
+
+                fp = em.getExistingFPById(id);
+        } else {
+            LocalDateTime time = LocalDateTime.now();
+            time = time.truncatedTo(ChronoUnit.HOURS);
+
+            String ip;
+            if(Play.isProd()) {
+                ip = getHeader(request(), "X-Real-IP");
+            } else {
+                ip = request().remoteAddress();
+            }
+
+                fp = em.createFull(id,
                     DigestUtils.sha1Hex(ip), Timestamp.valueOf(time), getAttribute(json,"userAgentHttp"),
                     getAttribute(json,"acceptHttp"), getAttribute(json,"hostHttp"), getAttribute(json,"connectionHttp"),
                     getAttribute(json,"encodingHttp"), getAttribute(json,"languageHttp"), getAttribute(json,"orderHttp"),
@@ -234,14 +347,19 @@ public class FPController extends Controller{
                     getAttribute(json,"resolutionFlash"), getAttribute(json,"languageFlash"), getAttribute(json,"platformFlash"),
                     getAttribute(json,"adBlock"), pluginsJsHashed, canvasJsHashed, fontsFlashHashed);
 
-            newFp = true;
         }
 
-        ObjectNode node = (ObjectNode) Json.toJson(fp);
+
+        //Presque compris la suite
+       
+        ObjectNode node = (ObjectNode) Json.toJson(fpmongo);
+        //System.out.println(node);
         int counter = node.get("counter").asInt();
+        //System.out.println(counter);
         node.remove("counter");
         node.remove("octaneScore");
         node.remove("sunspiderTime");
+        //System.out.println(node.get("addressHttp"));
         node.remove("addressHttp");
         node.remove("time");
         node.remove("hostHttp");
@@ -250,6 +368,7 @@ public class FPController extends Controller{
         node.remove("id");
         node.remove("webGlJs");
         json = (JsonNode) node;
+        
 
         //Analyse the user agent
         ParsedFP parsedFP = new ParsedFP(node.get("userAgentHttp").asText());
@@ -259,19 +378,18 @@ public class FPController extends Controller{
         parsedFP.setNbFonts(node.get("fontsFlash").asText());
 
         //Get the stats instance
-        Stats s = Stats.getInstance();
-        if(newFp) {
-            //Add the newly parsed FP to the stats
-            s.addFingerprint(parsedFP);
-        }
+        Stats s = new Stats(collection);
+         //Stats.getInstance();
+         System.out.println (s.getLanguages());
+    
 
         //Number of fingerprints
         Double nbTotal = s.getNbTotal().doubleValue();
         //Number of identical fingerprints
         Integer nbIdent = em.getNumberOfIdenticalFingerprints(json);
         //Get the percentages of every attribute
-        //Map<String,Double> percentages = em.getPercentages(json);
-        Map<String,Double> percentages = new HashMap<>();
+        Map<String,Double> percentages = em.getPercentages(json);
+        //Map<String,Double> percentages = new HashMap<>();
 
         //Get some general stats
         HashMap<String, VersionMap> osMap = s.getOs();
