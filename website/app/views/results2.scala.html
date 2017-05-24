@@ -1,5 +1,5 @@
 @import com.fasterxml.jackson.databind.JsonNode
-@(fp : JsonNode)(pFp: ParsedFP)(per : JsonNode)(os: JsonNode)(brow: JsonNode)(lang: JsonNode)(timezone: JsonNode)(nbTotal: Double)(nbIdent: Integer)(counter: String)
+@(fp : JsonNode)(pFp: ParsedFP)(per : JsonNode)(os: JsonNode)(brow: JsonNode)(lang: JsonNode)(timezone: JsonNode)(nbTotal: Double)(nbIdent: Integer)(counter: String)(permap : HashMap[String,Double])
 
 <style>
 [rel="popover"]{
@@ -124,108 +124,20 @@ $(document).ready(function() {
                 </thead>
                 <tbody>
                     @display(column : String) = {
-                        <td id="@column.toString().concat("Val")"></td>
+                        <td id="@column.toString().concat("Permap")">@permap.get(column)</td>
                         <td id="@column.toString().concat("Val")">@fp.get(column)</td>
                     }
 
-                    <tr id="userAgentHttp">
-                        <td>@Messages("fp.userAgent") <i class="fa fa-info-circle fa-2" rel="popover" data-content="@Messages("fp.userAgentExp")"></i></td>
-                        @display(column = "userAgentHttp")
-                    </tr>
-                    <tr id="acceptHttp">
-                        <td>@Messages("fp.accept") <i class="fa fa-info-circle fa-2" rel="popover" data-content="@Messages("fp.acceptExp")"></i></td>
-                        @display(column = "acceptHttp")
-                    </tr>
-
-                    <tr id="encodingHttp">
-                        <td>@Messages("fp.encoding") <i class="fa fa-info-circle fa-2" rel="popover" data-content="@Messages("fp.encodingExp")"></i></td>
-                        @display(column = "encodingHttp")
-                    </tr>
-
-                    <tr id="languageHttp">
-                        <td>@Messages("fp.language") <i class="fa fa-info-circle fa-2" rel="popover" data-content="@Messages("fp.languageExp")"></i></td>
-                        @display(column = "languageHttp")
-                    </tr>
-
-                    <tr id="pluginsJs">
-                        <td>@Messages("fp.plugins") <i class="fa fa-info-circle fa-2" rel="popover" data-content="@Messages("fp.pluginsExp")"></i></td>
-                        @display(column = "pluginsJs")
-                    </tr>
-
-                    <tr id="platformJs">
-                        <td>@Messages("fp.platformJ") <i class="fa fa-info-circle fa-2" rel="popover" data-content="@Messages("fp.platformJExp")"></i></td>
-                        @display(column = "platformJs")
-                    </tr>
-
-                    <tr id="cookiesJs">
-                        <td>@Messages("fp.cookies") <i class="fa fa-info-circle fa-2" rel="popover" data-content="@Messages("fp.cookiesExp")"></i></td>
-                        @display(column = "cookiesJs")
-                    </tr>
-
-                    <tr id="dntJs">
-                        <td>@Messages("fp.dnt") <i class="fa fa-info-circle fa-2" rel="popover" data-content="@Messages("fp.dntExp")"></i></td>
-                        @display(column = "dntJs")
-                    </tr>
-
-                    <tr id="timezoneJs">
-                        <td>@Messages("fp.timezone") <i class="fa fa-info-circle fa-2" rel="popover" data-content="@Messages("fp.timezoneExp")"></i></td>
-                        @display(column = "timezoneJs")
-                    </tr>
-
-                    <tr id="resolutionJs">
-                        <td>@Messages("fp.resolutionJ") <i class="fa fa-info-circle fa-2" rel="popover" data-content="@Messages("fp.resolutionJExp")"></i></td>
-                        @display(column = "resolutionJs")
-                    </tr>
-
-                    <tr id="localJs">
-                        <td>@Messages("fp.local") <i class="fa fa-info-circle fa-2" rel="popover" data-content="@Messages("fp.localExp")"></i></td>
-                        @display(column = "localJs")
-                    </tr>
-
-                    <tr id="sessionJs">
-                        <td>@Messages("fp.session") <i class="fa fa-info-circle fa-2" rel="popover" data-content="@Messages("fp.sessionExp")"></i></td>
-                        @display(column = "sessionJs")
-                    </tr>
-
-                    <tr id="canvasJs">
-                        <td>@Messages("fp.canvas") <i class="fa fa-info-circle fa-2" rel="popover" data-content="@Messages("fp.canvasExp")"></i></td>
-                        @display(column = "canvasJs")
-                    </tr>
-
-                    <tr id="vendorWebGljs">
-                        <td>@Messages("fp.vendorWebGl") <i class="fa fa-info-circle fa-2" rel="popover" data-content="@Messages("fp.vendorWebGlExp")"></i></td>
-                        @display(column = "vendorWebGljs")
-                    </tr>
-
-                    <tr id="rendererWebGljs">
-                        <td>@Messages("fp.rendererWebGl") <i class="fa fa-info-circle fa-2" rel="popover" data-content="@Messages("fp.rendererWebGlExp")"></i></td>
-                        @display(column = "rendererWebGljs")
-                    </tr>
-
-                    <tr id="fontsFlash">
-                        <td>@Messages("fp.fonts") <i class="fa fa-info-circle fa-2" rel="popover" data-content="@Messages("fp.fontsExp")"></i></td>
-                        @display(column = "fontsFlash")
-                    </tr>
-
-                    <tr id="resolutionFlash">
-                        <td>@Messages("fp.resolutionF") <i class="fa fa-info-circle fa-2" rel="popover" data-content="@Messages("fp.resolutionFExp")"></i></td>
-                        @display(column = "resolutionFlash")
-                    </tr>
-
-                    <tr id="languageFlash">
-                        <td>@Messages("fp.languageF") <i class="fa fa-info-circle fa-2" rel="popover" data-content="@Messages("fp.languageFExp")"></i></td>
-                        @display(column = "languageFlash")
-                    </tr>
-
-                    <tr id="platformFlash">
-                        <td>@Messages("fp.platformF") <i class="fa fa-info-circle fa-2" rel="popover" data-content="@Messages("fp.platformFExp")"></i></td>
-                        @display(column = "platformFlash")
-                    </tr>
-
-                    <tr id="adBlock">
-                        <td>@Messages("fp.adBlock") <i class="fa fa-info-circle fa-2" rel="popover" data-content="@Messages("fp.adBlockExp")"></i></td>
-                        @display(column = "adBlock")
-                    </tr>
+                    @for((key,value) <- permap){ 
+                    <tr id=key>
+                        <td>@Messages(key) <i class="fa fa-info-circle fa-2" rel="popover" data-content="@Messages("test")"></i></td>
+                        
+                        @display(column = key)
+                        @println(s"$key")
+                        @println(s"$value")
+                        
+                    </tr>  
+                    }
                 </tbody>
             </table>
         </div>

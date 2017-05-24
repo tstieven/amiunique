@@ -1,4 +1,4 @@
-package models;
+package controllers;
 import javax.persistence.*;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -11,10 +11,9 @@ import play.libs.Json;
 import play.mvc.Controller;
 import play.mvc.Http;
 import play.mvc.Result;
-import views.html.fp;
-import views.html.fpNoJs;
-import views.html.results;
-import views.html.viewFP;
+import views.html.results2;
+
+
 
 import java.sql.Timestamp;
 import java.time.LocalDateTime;
@@ -26,6 +25,9 @@ import java.util.List;
 import java.util.Set;
 import java.util.Arrays;
 import java.util.Properties;
+import java.util.Map.Entry;
+
+
 
 import com.mongodb.BasicDBObject;
 import com.mongodb.BulkWriteOperation;
@@ -52,9 +54,15 @@ import org.apache.commons.lang3.ArrayUtils;
 
 public class Main extends Controller{
 	public static HashMap<String,String[]> configHashMap= new HashMap<String,String[]>(); 
-	private DBCollection collection;
+	private static DBCollection collection;
+    public static int nbTotal;
+    public static int counter;
+    public static HashMap<String,Double> percentages = new HashMap<String,Double>() ;
+
+
+
 	//return a collection of MongoDB's database,
-	/*public DBCollection connection(){
+	public static DBCollection connection(){
         try{
 
             String s = "spirals";
@@ -76,7 +84,7 @@ public class Main extends Controller{
       }
       return collection;
 
-    }*/
+    }
 
 	public static String getAttribute(JsonNode json, String attribute){
         if(json.get(attribute) == null){
@@ -137,61 +145,55 @@ public class Main extends Controller{
         return cpt;
     }
 
-    public static int getNbAttribut(DBCollection coll,String name){
-       int cpt= 0;
-        BasicDBObject query = new BasicDBObject(name,fpHashMap.get(name));
-        DBCursor cursor = coll.find(query);
-        try {
-                while(cursor.hasNext()) {
-                    DBObject doc = cursor.next();
-                    cpt=cpt+Integer.parseInt((String)doc.get("counter"));
-                }
-            }finally {
-                cursor.close();
-            }       
-        return cpt; 
-    }
-
-
     public static void addFingerprint() {
 
         //Get FP attributes (body content)
+        System.out.println("test");
         JsonNode json = request().body().asJson();
     
         //MongoDb's part
-        FingerprintManager fpc = new FingerprintManager();
-        DBCollection collection = fpc.connection();
+        //FingerprintManager fpc = new FingerprintManager();
+        DBCollection collection = connection();
         //DBCollection collection = connection();
         listConfig(new File("conf/json"),json);
-       
+
         FpData data = new FpData(json,configHashMap);
         data.chooseItself(collection);
-        System.out.println(getNbTotal(collection));
+        nbTotal=getNbTotal(collection);
+        percentages = data.getEachPercentage(collection,nbTotal);
+        System.out.println(percentages);
+        //System.out.println("Je suis toujours la :");
+         ObjectNode node = (ObjectNode) Json.toJson(data.fpHashMap);
+        //System.out.println(json);
+        int counter = data.counter;
+        
+
+       /*StringBuilder stringMapTable = new StringBuilder();
+        stringMapTable.append("<table>");
+
+        Iterator it = percentages.entrySet().iterator();
+            while (it.hasNext()) {
+                Map.Entry pair = (Map.Entry)it.next();
+                stringMapTable.append("<tr><td>" + pair.getKey() + "</td><td>" +pair.getValue() + "</td></tr>");
+                System.out.println(pair.getKey() + " = " + pair.getValue());
+                it.remove(); // avoids a ConcurrentModificationException
+            }
+
+        String mapTable = stringMapTable.toString();*/
+
+        
+        //return ok(results2.render());
+
     }
+        
+    
+
 
         //Mongo's part
         
 /*
        
-        //Presque compris la suite
-       
-        ObjectNode node = (ObjectNode) Json.toJson(fpmongo);
-        //System.out.println(node);
-        int counter = node.get("counter").asInt();
-        //System.out.println(counter);
-        node.remove("counter");
-        node.remove("octaneScore");
-        node.remove("sunspiderTime");
-        //System.out.println(node.get("addressHttp"));
-        node.remove("addressHttp");
-        node.remove("time");
-        node.remove("hostHttp");
-        node.remove("connectionHttp");
-        node.remove("orderHttp");
-        node.remove("id");
-        node.remove("webGlJs");
-        json = (JsonNode) node;
-        
+      
 
         //Analyse the user agent
         ParsedFP parsedFP = new ParsedFP(node.get("userAgentHttp").asText());

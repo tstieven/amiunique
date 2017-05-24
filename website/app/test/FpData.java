@@ -53,19 +53,18 @@ import org.apache.commons.lang3.ArrayUtils;
 
 public class FpData extends Controller{
   
-    private static HashMap<String, Object> fpHashMap = new HashMap<String, Object>();
+    public static HashMap<String, Object> fpHashMap = new HashMap<String, Object>();
     private static HashMap<String, String[]> configHashMap = new HashMap<String, String[]>();
-    private static String id;
+    public static int counter;
 
     public FpData(JsonNode json,HashMap<String, String[]> confHashMap){
 
-        getId();
-        fpHashMap.put("id",id);
+        fpHashMap.put("id",getId());
         fpHashMap.put("ip",getIp());
         fpHashMap.put("time",getTime()); 
         fpHashMap.put("counter","1");
         configHashMap= confHashMap;
-        throughConfigAdd(json);
+        throughConfigAddInDB(json);
     }
 
 
@@ -83,12 +82,12 @@ public class FpData extends Controller{
                     System.out.println("one up");
                 }else{
                     save(coll);
+                    counter=1;
                     System.out.println("save");
                 }
             } finally {
                 cursor.close();
-            }       
-        
+            }      
     }
 
 
@@ -108,7 +107,8 @@ public class FpData extends Controller{
     public void addCounter(DBCollection coll,DBCursor cursor,BasicDBObject query){
         DBObject updateDoc = cursor.next();
         String tmp=(String)updateDoc.get("counter");
-        updateDoc.put("counter",Integer.toString(Integer.parseInt(tmp)+1));
+        counter=Integer.parseInt(tmp)+1;
+        updateDoc.put("counter",Integer.toString(counter));
         coll.update(query,updateDoc);
     }
 
@@ -122,14 +122,15 @@ public class FpData extends Controller{
         }
     }
 
-    public static void getId(){
+    public static String getId(){
         Http.Cookie cookie = request().cookies().get("amiunique");
-        
+        String id;
         if(cookie == null){
             id = "Not supported";
         } else {
             id = cookie.value();
-        }  
+        }
+        return id ;
     }
 
     public static String getTime(){
@@ -156,7 +157,7 @@ public class FpData extends Controller{
         }
     }
 
-    public static void throughConfigAdd(JsonNode json){
+    public static void throughConfigAddInDB(JsonNode json){
       
 
         Iterator it=configHashMap.entrySet().iterator();
@@ -181,6 +182,21 @@ public class FpData extends Controller{
         }
     }
 
+     public static HashMap<String,Double> getEachPercentage(DBCollection coll,int nbtotal){
+      
+        HashMap<String,Double> nbMap= new HashMap<String,Double>();
+        Iterator it=configHashMap.entrySet().iterator();
+        while (it.hasNext()) {
+            Map.Entry pair = (Map.Entry)it.next();
+            String name = (String)pair.getKey();
+            String[] config = ((String[])pair.getValue());
+            if ((config[4].equals((String)"True"))&&(config[3].equals((String)"True"))){
+                nbMap.put(name,(double)((double)getNbAttribut(coll,name)*(double)100/(double)nbtotal));   
+            }            
+        }
+        return nbMap;
+    }
+
 
     public static void addInHashMap(JsonNode json,String name, String[] config){
         
@@ -200,26 +216,27 @@ public class FpData extends Controller{
             
             System.out.println("Query : "+name);
             query.put(name,fpHashMap.get(name));
-
-            
-            /*play.api.Application$$anon$1: Execution exception[[NullPointerException: null]]
-    at play.api.Application$class.handleError(Application.scala:296) ~[play_2.11-2.3.10.jar:2.3.10]
-    at play.api.DefaultApplication.handleError(Application.scala:402) [play_2.11-2.3.10.jar:2.3.10]
-    at play.core.server.netty.PlayDefaultUpstreamHandler$$anonfun$3$$anonfun$applyOrElse$4.apply(PlayDefaultUpstreamHandler.scala:320) [play_2.11-2.3.10.jar:2.3.10]
-    at play.core.server.netty.PlayDefaultUpstreamHandler$$anonfun$3$$anonfun$applyOrElse$4.apply(PlayDefaultUpstreamHandler.scala:320) [play_2.11-2.3.10.jar:2.3.10]
-    at scala.Option.map(Option.scala:146) [scala-library-2.11.6.jar:na]
-Caused by: java.lang.NullPointerException: null
-    at views.html.results$.apply(results.template.scala:117) ~[na:na]
-    at views.html.results$.render(results.template.scala:539) ~[na:na]
-    at views.html.results.render(results.template.scala) ~[na:na]
-    at controllers.FPController.addFingerprint(FPController.java:414) ~[na:na]
-    at Routes$$anonfun$routes$1$$anonfun$applyOrElse$15$$anonfun$apply$15.apply(routes_routing.scala:305) ~[na:na]
-*/
             if (config[0].equals((String)"True")){
                 System.out.println("Query : "+name+"Hashed");
                 query.put(name+"Hashed",fpHashMap.get(name+"Hashed"));
             }
             
         }     
+    }
+
+
+    public static int getNbAttribut(DBCollection coll,String name){
+       int cpt= 0;
+        BasicDBObject query = new BasicDBObject(name,fpHashMap.get(name));
+        DBCursor cursor = coll.find(query);
+        try {
+                while(cursor.hasNext()) {
+                    DBObject doc = cursor.next();
+                    cpt=cpt+Integer.parseInt((String)doc.get("counter"));
+                }
+            }finally {
+                cursor.close();
+            }       
+        return cpt; 
     } 
 }

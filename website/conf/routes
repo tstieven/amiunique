@@ -19,7 +19,12 @@ GET         /timeline/:id            controllers.ExtensionController.timeline(id
 GET         /timeline                controllers.ExtensionController.noTimeline()
 GET         /getNbEvol/:id           controllers.ExtensionController.getNbEvol(id: String)
 
-POST        /results                 controllers.FPController.addFingerprint()
+POST        /results                controllers.FPController.addFingerprint()
+
+
+#POST		/results2				 controllers.Main.addFingerprint()
+
+
 POST        /percentages             controllers.StatsController.percentages()
 POST        /stats                   controllers.StatsController.statsTime()
 POST        /evolution/:id           controllers.ExtensionController.addFingerprintFromExtension(id: String)

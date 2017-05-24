@@ -13,6 +13,7 @@ import play.mvc.Result;
 import views.html.fp;
 import views.html.fpNoJs;
 import views.html.results;
+import views.html.results2;
 import views.html.viewFP;
 
 import java.sql.Timestamp;
@@ -65,6 +66,9 @@ public class FPController extends Controller{
     }
 
     public static Result fp() {
+        System.out.println(request().cookies().get("amiunique"));
+        System.out.println(request().cookies().get("tempFp"));
+        System.out.println(request().cookies().get("tempPerc"));
         if(request().cookies().get("amiunique") == null){
             response().setCookie("amiunique", UUID.randomUUID().toString(),60*60*24*120,"/","amiunique.org",true,true);
             response().setCookie("tempReturningVis","temp",60*60*12);
@@ -235,6 +239,7 @@ public class FPController extends Controller{
         Fingerprint fpmongo;
         
         Main main = new Main();
+
         main.addFingerprint();
         
 
@@ -372,6 +377,7 @@ public class FPController extends Controller{
 
         //Analyse the user agent
         ParsedFP parsedFP = new ParsedFP(node.get("userAgentHttp").asText());
+
         //Analyse the language and timezone
         parsedFP.setLanguage(node.get("languageHttp").asText());
         parsedFP.setTimezone(node.get("timezoneJs").asText());
@@ -384,12 +390,19 @@ public class FPController extends Controller{
     
 
         //Number of fingerprints
-        Double nbTotal = s.getNbTotal().doubleValue();
+        Double nbTotal = (double)main.nbTotal;
+        //s.getNbTotal().doubleValue();
         //Number of identical fingerprints
-        Integer nbIdent = em.getNumberOfIdenticalFingerprints(json);
+        Integer nbIdent = main.counter;
+        //em.getNumberOfIdenticalFingerprints(json);
         //Get the percentages of every attribute
-        Map<String,Double> percentages = em.getPercentages(json);
-        //Map<String,Double> percentages = new HashMap<>();
+        HashMap<String,Double> percentages = new HashMap<>();
+         HashMap<String,Double> percentag = new HashMap<>();
+        percentag = main.percentages;
+        //em.getPercentages(json);
+        //main.percentages;
+        //em.getPercentages(json);
+         
 
         //Get some general stats
         HashMap<String, VersionMap> osMap = s.getOs();
@@ -409,11 +422,17 @@ public class FPController extends Controller{
         n.put("c",counter);
         n.put("t", Crypto.generateToken());
         String c = Crypto.encryptAES(n.toString());
+        StringBuilder stringMapTable = new StringBuilder();
 
-        //Render the FP + Stats
+
+
+
+
+       //Render the FP + Stats
+        System.out.println("salut"+percentag);
         return ok(results.render(json, parsedFP, Json.toJson(percentages), Json.toJson(osMap),
                 Json.toJson(browsersMap), Json.toJson(langMap), Json.toJson(timezoneMap), nbTotal,
-                nbIdent, c));
+                nbIdent, c)); 
     }
 
     public static Result viewFP() {
