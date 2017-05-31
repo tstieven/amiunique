@@ -53,7 +53,7 @@ import org.apache.commons.lang3.ArrayUtils;
 
 
 public class Main extends Controller{
-	public static HashMap<String,String[]> configHashMap= new HashMap<String,String[]>(); 
+	/*public static HashMap<String,String[]> configHashMap= new HashMap<String,String[]>(); 
 	private static DBCollection collection;
     public static int nbTotal;
     public static int counter;
@@ -108,7 +108,6 @@ public class Main extends Controller{
         }
     }
 
-
     //get value in a .json 
     public static void searchInConfig(String path,JsonNode json){
         
@@ -126,7 +125,7 @@ public class Main extends Controller{
         String name = getAttribute(myJson,"name");
         String[] val = new String[] {getAttribute(myJson,"hash"),getAttribute(myJson,"use in comparison"),getAttribute(myJson,"async"),
         getAttribute(myJson,"display"),getAttribute(myJson,"enable"),getAttribute(myJson,"jsrequired"),
-        getAttribute(myJson,"flashrequired")};
+        getAttribute(myJson,"flashrequired"),getAttribute(myJson,"sentence1"),getAttribute(myJson,"sentence2")};
         configHashMap.put(name,val);
     }
 
@@ -145,10 +144,9 @@ public class Main extends Controller{
         return cpt;
     }
 
-    public static void addFingerprint() {
+    public static Result addFingerprint() {
 
         //Get FP attributes (body content)
-        System.out.println("test");
         JsonNode json = request().body().asJson();
     
         //MongoDb's part
@@ -161,28 +159,32 @@ public class Main extends Controller{
         data.chooseItself(collection);
         nbTotal=getNbTotal(collection);
         percentages = data.getEachPercentage(collection,nbTotal);
-        System.out.println(percentages);
         //System.out.println("Je suis toujours la :");
          ObjectNode node = (ObjectNode) Json.toJson(data.fpHashMap);
         //System.out.println(json);
-        int counter = data.counter;
+        Integer counter =data.counter;
         
 
-       /*StringBuilder stringMapTable = new StringBuilder();
-        stringMapTable.append("<table>");
+ 
 
-        Iterator it = percentages.entrySet().iterator();
-            while (it.hasNext()) {
-                Map.Entry pair = (Map.Entry)it.next();
-                stringMapTable.append("<tr><td>" + pair.getKey() + "</td><td>" +pair.getValue() + "</td></tr>");
-                System.out.println(pair.getKey() + " = " + pair.getValue());
-                it.remove(); // avoids a ConcurrentModificationException
-            }
+        HashMap<String,Percentages> per= new HashMap<String,Percentages>();
+        double d= 53;
+        HashMap<String,String[]>val=configHashMap;
 
-        String mapTable = stringMapTable.toString();*/
+        //il faudra changer le type car la clé est inutile pour le moment
+     
+        per.put("browsers",new Percentages(" FireFox",d,val.get("userAgentHttp")[7],val.get("userAgentHttp")[8]));
+        per.put("os",new Percentages(" Ubuntu",d,val.get("userAgentHttp")[7],val.get("userAgentHttp")[8]));
+        per.put("browsers",new Percentages(" FireFox",d,val.get("userAgentHttp")[7],val.get("userAgentHttp")[8]));
 
+
+        HashMap<String,SuperGraphValues> supergraph= new HashMap<String,SuperGraphValues>();
+        HashMap<String,GraphValues> graph= new HashMap<String,GraphValues>();
+    
         
-        //return ok(results2.render());
+
+        return ok(results2.render(json,(double)nbTotal,counter,percentages,per,graph,supergraph)); 
+      
 
     }
         
@@ -191,16 +193,16 @@ public class Main extends Controller{
 
         //Mongo's part
         
-/*
-       
-      
 
-        //Analyse the user agent
+       
+     /* 
+//Analyse the user agent
         ParsedFP parsedFP = new ParsedFP(node.get("userAgentHttp").asText());
         //Analyse the language and timezone
         parsedFP.setLanguage(node.get("languageHttp").asText());
         parsedFP.setTimezone(node.get("timezoneJs").asText());
         parsedFP.setNbFonts(node.get("fontsFlash").asText());
+
 
         //Get the stats instance
         Stats s = new Stats(collection);

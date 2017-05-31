@@ -1,5 +1,5 @@
 @import com.fasterxml.jackson.databind.JsonNode
-@(fp : JsonNode)(pFp: ParsedFP)(per : JsonNode)(os: JsonNode)(brow: JsonNode)(lang: JsonNode)(timezone: JsonNode)(nbTotal: Double)(nbIdent: Integer)(counter: String)(permap : HashMap[String,Double])
+@(fp : JsonNode)(nbTotal: Double)(nbIdent: Integer)(permap : HashMap[String,Double])(overview : HashMap[String,Percentages])(graph : HashMap[String,GraphValues])(supergraph : HashMap[String,SuperGraphValues])
 
 <style>
 [rel="popover"]{
@@ -32,7 +32,6 @@ $(document).ready(function() {
     });
 </script>
 
-<div id="counter" style="display: none;">@counter</div>
 
 <ul class="nav nav-tabs" role="tablist">
     <li class="active"><a class="colored-tabs" href="#overview" role="tab" data-toggle="tab">@Messages("fp.overview")</a></li>
@@ -54,41 +53,12 @@ $(document).ready(function() {
                 <h1 style="color:green">@Messages("fp.track3")</h1>
             }
         }
-
-        <!-- Browser -->
-        @if(pFp.getBrowser() != "Others"){
-            <p>@{"%.2f".format(per.get(pFp.getBrowser()).doubleValue())} @Messages("fp.browser1") <strong>@pFp.getBrowser()</strong>@Messages("fp.browser2")</p>
-            <p>@{"%.2f".format(brow.get(pFp.getBrowser()).get(pFp.getBrowserVersion()).doubleValue()*100/nbTotal)}
-                @Messages("fp.browser1") <strong>@pFp.getBrowser() @pFp.getBrowserVersion()</strong>@Messages("fp.browser2")</p>
-        } else {
-            <p>@{"%.2f".format(per.get(pFp.getBrowser()).doubleValue())} @Messages("fp.unknownBrow")</p>
-        }
-
-        <!-- OS -->
-        @if(pFp.getOs() != "Others") {
-            <p>@{"%.2f".format(per.get(pFp.getOs()).doubleValue())} @Messages("fp.os1") <strong>@pFp.getOs()</strong>@Messages("fp.os2")</p>
-            @if(pFp.getOsVersion() != "Other distros") {
-                <p>@{"%.2f".format(os.get(pFp.getOs()).get(pFp.getOsVersion()).doubleValue() * 100 / nbTotal)} @Messages("fp.os1")
-                    <strong>@pFp.getOs() @pFp.getOsVersion()</strong>@Messages("fp.os2")</p>
+        @for((key,value) <- overview){ 
+            @if(key != "Others"){      
+                <p>@{"%.2f".format(value.getPercentages)} @Messages(value.getSentence1)<strong>@value.getName()</strong>@Messages(value.getSentence2)</p>
             }
-        } else {
-             <p>@{"%.2f".format(per.get(pFp.getOs()).doubleValue())} @Messages("fp.unknownOs")</p>
         }
 
-        <!-- Language -->
-        @if(pFp.getLanguage() != "Not communicated") {
-            <p>@{"%.2f".format(lang.get(pFp.getLanguage()).doubleValue() * 100 / nbTotal)} @Messages("fp.lang1")
-                <strong>"@pFp.getLanguage()"</strong>@Messages("fp.lang2")</p>
-        }
-
-        <!-- Timezone -->
-        <p>@{"%.2f".format(timezone.get(pFp.getTimezone()).doubleValue() * 100 / nbTotal)} @Messages("fp.time1") <strong>
-        @if(fp.get("timezoneJs").asInt()<0){
-            UTC+@{fp.get("timezoneJs").asInt()/(-60)}
-        } else {
-            UTC@{fp.get("timezoneJs").asInt()/(-60)}
-        }
-            </strong> @Messages("fp.time2")</p>
 
         <!-- Uniqueness details-->
         @if(nbIdent<2) {
@@ -124,7 +94,7 @@ $(document).ready(function() {
                 </thead>
                 <tbody>
                     @display(column : String) = {
-                        <td id="@column.toString().concat("Permap")">@permap.get(column)</td>
+                        <td id="@column.toString().concat("Permap")">@{"%.2f".format(permap.get(column))}</td>
                         <td id="@column.toString().concat("Val")">@fp.get(column)</td>
                     }
 
@@ -133,8 +103,7 @@ $(document).ready(function() {
                         <td>@Messages(key) <i class="fa fa-info-circle fa-2" rel="popover" data-content="@Messages("test")"></i></td>
                         
                         @display(column = key)
-                        @println(s"$key")
-                        @println(s"$value")
+                     
                         
                     </tr>  
                     }
@@ -147,119 +116,46 @@ $(document).ready(function() {
         <div class="col-md-4">
             <h1>@Messages("fp.graphsTitle")</h1>
             <i class="fa fa-info-circle fa-3" rel="popover"
-                        data-content="@Messages("fp.graphsExp")"></i>
+                data-content="@Messages("fp.graphsExp")"></i>
             <script type="application/javascript">
-                var nbTotal = @nbTotal;
+            
 
-                /* OS */
-                var osData = '@{Html(os.toString())}';
-                osData = $.parseJSON(osData);
-                var osArray = [];
-                var verArray = [];
+                @for((key,value) <- supergraph){ 
 
-                $.each(osData, function(key, os) {
-                    var total = 0 ;
-                    if(key == '@pFp.getOs()'){
-                        $.each(os, function(ver, numb){
-                            total += numb;
-                            if(ver == '@pFp.getOsVersion()'){
-                                verArray.push({name: ver,y: numb*100/nbTotal, color:'#90ed7d' , visible: true, sliced: true});
-                            } else {
-                                verArray.push({name: ver,y: numb*100/nbTotal, color:'#434348' , visible: true});
-                            }
-                        });
-                        osArray.push({name: key,y: total*100/nbTotal,color:'#90ed7d'});
-                    } else {
-                        $.each(os, function(ver, numb){
-                            total += numb;
-                            verArray.push({name: ver,y: numb*100/nbTotal, color:'#434348' , visible: true});
-                        });
-                        osArray.push({name: key,y: total*100/nbTotal,color:'#434348' });
-                    }
-                });
-
-                $('#osGraph').highcharts({
-                    chart: {
-                        type: 'pie'
-                    },
-                    title: {
-                        text: 'Operating systems'
-                    },
-                    yAxis: {
-                        title: {
-                            text: 'Total percent share'
-                        }
-                    },
-                    plotOptions: {
-                        pie: {
-                            shadow: false,
-                            center: ['50%', '50%']
-                        }
-                    },
-                    tooltip: {
-                        valueSuffix: '%',
-                        formatter: function() {
-                            return '<b>'+ this.point.name +'</b><br>Percentage : '+ Highcharts.numberFormat(this.y,2)+'%';
-                        }
-                    },
-                    series: [{
-                        name: 'Percentage',
-                        data: osArray,
-                        size: '60%',
-                        dataLabels: {
-                            formatter: function () {
-                                return this.y > 5 ? this.point.name : null;
-                            },
-                            color: 'white',
-                            distance: -30
-                        }
-                    }, {
-                        name: 'Percentage',
-                        data: verArray,
-                        size: '80%',
-                        innerSize: '60%',
-                        dataLabels: {
-                            formatter: function () {
-                                // display only if larger than 1
-                                return this.y > 1 ? '<b>' + this.point.name + ':</b> ' + Highcharts.numberFormat(this.y,2) + '%'  : null;
-                            }
-                        }
-                    }]
-                });
-
-                /* Browser */
-                var browData = '@{Html(brow.toString())}';
+                var browData = '@{Html(supergraph.get(key).getJson().toString())}';
                 browData = $.parseJSON(browData);
                 var browArray = [];
                 verArray = [];
 
                 $.each(browData, function(key, brow) {
                     var total = 0 ;
-                    if(key == '@pFp.getBrowser()'){
+                    if(key == '@{Html(supergraph.get(key).getName())}'){
                         $.each(brow, function(ver, numb){
                             total += numb;
-                            if(ver == '@pFp.getBrowserVersion()'){
-                                verArray.push({name: ver,y: numb*100/nbTotal, color:'#90ed7d' , visible: true, sliced: true});
+                            if(ver == '@{Html(supergraph.get(key).getVersion())}'){
+                                verArray.push({name: ver,y: numb*100, color:'#90ed7d' , visible: true, sliced: true});
                             } else {
-                                verArray.push({name: ver,y: numb*100/nbTotal, color:'#434348' , visible: true});
+                                verArray.push({name: ver,y: numb*100, color:'#434348' , visible: true});
                             }
                         });
-                        browArray.push({name: key,y: total*100/nbTotal,color:'#90ed7d'});
+                        browArray.push({name: key,y: total*100,color:'#90ed7d'});
                     } else {
                         $.each(brow, function(ver, numb){
                             total += numb;
-                            verArray.push({name: ver,y: numb*100/nbTotal, color:'#434348' , visible: true});
+                            verArray.push({name: ver,y: numb*100, color:'#434348' , visible: true});
                         });
-                        browArray.push({name: key,y: total*100/nbTotal,color:'#434348' });
+                        browArray.push({name: key,y: total*100,color:'#434348' });
                     }
                 });
 
-                $('#browGraph').highcharts({
+                var supgraph = '@{Html(supergraph.get(key).getGraphName().toString())}';
+            
+                $("#"+supgraph).highcharts({
                     chart: {
                         type: 'pie'
                     },
                     title: {
-                        text: 'Browsers'
+                        text: '@{Html(supergraph.get(key).getTitle().toString())}'
                     },
                     yAxis: {
                         title: {
@@ -303,90 +199,34 @@ $(document).ready(function() {
                     }]
                 });
 
-                /* Language */
-                var langData = '@{Html(lang.toString())}';
-                langData = $.parseJSON(langData);
-                var langArray = [];
 
-                $.each(langData, function(key, lang) {
+                }
+                @for((key,value) <- graph){  
+                    var timeData = '@{Html(graph.get(key).getJson().toString())}'
+                    
+                    timeData = $.parseJSON(timeData);
+                    var timeArray = []; 
+                    $.each(timeData, function(key, lang) {
                     var total = 0 ;
-                    if(key == '@pFp.getLanguage()'){
-                        langArray.push({name: key,y: lang*100/nbTotal,color:'#90ed7d', sliced: true});
+                    if(key == '@{Html(graph.get(key).getName())}'){
+                        timeArray.push({name: key,y: lang*100,color:'#90ed7d', sliced: true});
                     } else {
-                        langArray.push({name: key,y: lang*100/nbTotal,color:'#434348' });
+                        timeArray.push({name: key,y: lang*100,color:'#434348' });
                     }
                 });
-
-                $('#langGraph').highcharts({
+                var grap = '@{Html(graph.get(key).getGraphName().toString())}'
+                $('#'+grap).highcharts({                
                     chart: {
                         plotBackgroundColor: null,
                         plotBorderWidth: null,
                         plotShadow: false
                     },
                     title: {
-                        text: 'Languages'
+                        text: '@{Html(graph.get(key).getTitle().toString())}'
                     },
                     yAxis: {
                         title: {
-                            text: 'Total percent share'
-                        }
-                    },
-                    tooltip: {
-                        pointFormat: '{series.name}: <b>{point.percentage:.1f}%</b>'
-                    },
-                    plotOptions: {
-                        pie: {
-                            allowPointSelect: true,
-                            cursor: 'pointer',
-                            dataLabels: {
-                                enabled: true,
-                                format: '<b>{point.name}</b>: {point.percentage:.1f} %'
-                            }
-                        }
-                    },
-                    series: [{
-                        type: 'pie',
-                        name: 'Percentages',
-                        data: langArray
-                    }]
-                });
-
-                /* Timezone */
-                var timeData = '@{Html(timezone.toString())}';
-                timeData = $.parseJSON(timeData);
-                var timeArray = [];
-                $.each(timeData, function(key, tab){
-                    var name = key;
-                    if(key != "no JS") {
-                        var utc = parseInt(key,10)/-60;
-                        if(utc<0){
-                            utc = "UTC" + utc ;
-                        } else {
-                            utc = "UTC+" + utc ;
-                        }
-                    } else {
-                        var utc = "Not specified";
-                    }
-                    var per = tab*100/nbTotal;
-                    if(name == '@pFp.getTimezone()'){
-                        timeArray.push({name:utc, y:per, color:'#90ed7d', sliced: true});
-                    } else {
-                        timeArray.push({name:utc, y:per, color:'#434348'});
-                    }
-                });
-
-                $('#timezoneGraph').highcharts({
-                    chart: {
-                        plotBackgroundColor: null,
-                        plotBorderWidth: null,
-                        plotShadow: false
-                    },
-                    title: {
-                        text: 'Timezones'
-                    },
-                    yAxis: {
-                        title: {
-                            text: 'Total percent share'
+                            text: '@{Html(graph.get(key).getTitle().toString())}'
                         }
                     },
                     tooltip: {
@@ -407,13 +247,21 @@ $(document).ready(function() {
                         name: 'Percentages',
                         data: timeArray
                     }]
-                });
+                }); 
+            }
+                              
+            
+               
+            </script> 
+            @for((key,value) <- supergraph){
+             <div id='@{Html(supergraph.get(key).getGraphName().toString())}' style="height: auto; width: auto"></div>
+            } 
 
-            </script>
-            <div id="osGraph" style="height: auto; width: auto"></div>
-            <div id="browGraph" style="height: auto; width: auto"></div>
-            <div id="langGraph" style="height: auto; width: auto"></div>
-            <div id="timezoneGraph" style="height: auto; width: auto"></div>
+            @for((key,value) <- graph){ 
+            
+                <div id= '@{Html(graph.get(key).getGraphName().toString())}' style="height: auto; width: auto"></div>   
+            }   
+
         </div>
     </div>
 </div>

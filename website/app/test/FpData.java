@@ -1,4 +1,4 @@
-package models;
+package controllers;
 
 import javax.persistence.*;
 
@@ -54,15 +54,14 @@ import org.apache.commons.lang3.ArrayUtils;
 public class FpData extends Controller{
   
     public static HashMap<String, Object> fpHashMap = new HashMap<String, Object>();
-    private static HashMap<String, String[]> configHashMap = new HashMap<String, String[]>();
-    public static int counter;
+    public static HashMap<String, String[]> configHashMap = new HashMap<String, String[]>();
+    public static Integer counter;
 
     public FpData(JsonNode json,HashMap<String, String[]> confHashMap){
 
         fpHashMap.put("id",getId());
         fpHashMap.put("ip",getIp());
         fpHashMap.put("time",getTime()); 
-        fpHashMap.put("counter","1");
         configHashMap= confHashMap;
         throughConfigAddInDB(json);
     }
@@ -71,18 +70,23 @@ public class FpData extends Controller{
     //Il faudra rajouter quelque chose pour eviter que la meme personne s'enregistre plusieurs fois
     //Comme à l'origine
     //Mais c'etait gênant pour les tests
-    public void chooseItself(DBCollection coll){
+    public void chooseItself(DBCollection coll, DBCollection combination,DBCollection nbtotal){
         BasicDBObject query = new BasicDBObject();
         throughConfigExisting(query); 
         int bool=0;         
         DBCursor cursor = coll.find(query);
         try {
                 if(cursor.hasNext()) {
-                    addCounter(coll,cursor,query);
-                    System.out.println("one up");
+
+                    //juste pour les tests
+                    save(coll,combination,nbtotal);
+
+
+
+
+                    System.out.println("not save");
                 }else{
-                    save(coll);
-                    counter=1;
+                    save(coll,combination,nbtotal);
                     System.out.println("save");
                 }
             } finally {
@@ -91,29 +95,66 @@ public class FpData extends Controller{
     }
 
 
-   	public void save(DBCollection coll){
+   	public void save(DBCollection coll,DBCollection combination,DBCollection nbtotal){
 			
         BasicDBObject doc = new BasicDBObject();
+        
         Iterator it=fpHashMap.entrySet().iterator();
         while (it.hasNext()) {
             Map.Entry pair = (Map.Entry)it.next();
            // System.out.println(pair.getKey()+ " : " +pair.getValue() );
            doc.put((String)pair.getKey(),(String)pair.getValue());
+           //System.out.println(pair.getKey());
+           if ((pair.getKey()!="ip")&&(pair.getKey()!="time")&&(pair.getKey()!="id")){
+
+               BasicDBObject query = new BasicDBObject("combination",pair.getValue());
+               //System.out.println(query);
+               DBCursor cursor = combination.find(query);
+               try{
+                if(cursor.hasNext()) {
+                    DBObject updateDoc = cursor.next();
+                    String tmp=(String)updateDoc.get("counter");
+                    counter=Integer.parseInt(tmp)+1;
+                    updateDoc.put("counter",Integer.toString(counter));
+                    combination.update(query,updateDoc);
+                    
+                }else{
+                    BasicDBObject combi= new BasicDBObject();
+                    combi.put("combination",pair.getValue());
+                    combi.put("indicator",pair.getKey());
+                    combi.put("counter","1");
+                    combination.insert(combi);
+                 }
+                }finally {
+                    cursor.close();
+                } 
+
+               BasicDBObject query2 = new BasicDBObject("indicator",pair.getKey());
+               DBCursor cursor2 = nbtotal.find(query2);
+            try{
+                if(cursor2.hasNext()) {
+                    DBObject updateDoc = cursor2.next();
+                    String tmp=(String)updateDoc.get("counter");
+                    counter=Integer.parseInt(tmp)+1;
+                    updateDoc.put("counter",Integer.toString(counter));
+                    nbtotal.update(query2,updateDoc);
+                    
+                }else{
+                    BasicDBObject nb= new BasicDBObject("indicator",pair.getKey());
+                    nb.put("counter","1");
+                    nbtotal.insert(nb);
+                 }
+                }finally {
+                    cursor.close();
+                }  
+
+            }
         }
            
-        coll.insert(doc);	    	
+        coll.insert(doc);
     }
 
-    public void addCounter(DBCollection coll,DBCursor cursor,BasicDBObject query){
-        DBObject updateDoc = cursor.next();
-        String tmp=(String)updateDoc.get("counter");
-        counter=Integer.parseInt(tmp)+1;
-        updateDoc.put("counter",Integer.toString(counter));
-        coll.update(query,updateDoc);
-    }
-
-
-
+    
     public static String getAttribute(JsonNode json, String attribute){
         if(json.get(attribute) == null){
             return "Not specified";
@@ -182,16 +223,35 @@ public class FpData extends Controller{
         }
     }
 
-     public static HashMap<String,Double> getEachPercentage(DBCollection coll,int nbtotal){
+    public static HashMap<String,Double> getEachPercentage(DBCollection combi,DBCollection nbtotal){
       
         HashMap<String,Double> nbMap= new HashMap<String,Double>();
         Iterator it=configHashMap.entrySet().iterator();
         while (it.hasNext()) {
             Map.Entry pair = (Map.Entry)it.next();
             String name = (String)pair.getKey();
+            int counter;
             String[] config = ((String[])pair.getValue());
-            if ((config[4].equals((String)"True"))&&(config[3].equals((String)"True"))){
-                nbMap.put(name,(double)((double)getNbAttribut(coll,name)*(double)100/(double)nbtotal));   
+            if ((config[1].equals((String)"True"))&&((config[8].equals((String)"True"))||(config[9].equals((String)"True"))||(config[10].equals((String)"True")))){
+                
+                BasicDBObject query = new BasicDBObject("indicator",pair.getKey());
+                DBCursor cursor = nbtotal.find(query);
+                try{
+                    if(cursor.hasNext()) {
+                        DBObject updateDoc = cursor.next();
+                        
+                        counter=Integer.parseInt((String)updateDoc.get("counter"));
+                        
+                        
+                    }else{
+                        counter=0;
+                     }
+                    }finally {
+                        cursor.close();
+                    }            
+                nbMap.put(name,(double)((double)getNbAttribut(combi,name)*(double)100/(double)counter));
+                //System.out.println("total"+counter); System.out.println("attribute"+getNbAttribut(combi,name));
+                   
             }            
         }
         return nbMap;
@@ -199,44 +259,47 @@ public class FpData extends Controller{
 
 
     public static void addInHashMap(JsonNode json,String name, String[] config){
-        
-        if(config[4].equals((String)"True")){
+        if(config[1].equals((String)"True")){
             fpHashMap.put(name,getAttribute(json,name));
-            System.out.println(name);
-            if(config[0].equals((String)"True")){
+            if(config[2].equals((String)"True")){
             fpHashMap.put(name+"Hashed",DigestUtils.sha1Hex(getAttribute(json,name+"Hashed")));
 
-            System.out.println(name+"Hashed");
             }
         }
     }
 
     public static void putInQuery(BasicDBObject query,String name, String[] config){
-        if((config[4].equals((String)"True"))&&(config[1].equals((String)"True"))){
-            
-            System.out.println("Query : "+name);
+        if((config[1].equals((String)"True"))&&(config[3].equals((String)"True"))){
             query.put(name,fpHashMap.get(name));
-            if (config[0].equals((String)"True")){
-                System.out.println("Query : "+name+"Hashed");
+            if (config[2].equals((String)"True")){
                 query.put(name+"Hashed",fpHashMap.get(name+"Hashed"));
             }
             
+        }else{
+            if (config[1].equals((String)"False")){
+                query.put(name,null);
+                if (config[2].equals((String)"True")){
+                    query.put(name+"Hashed",null);
+                }
+            }
         }     
     }
 
 
-    public static int getNbAttribut(DBCollection coll,String name){
+    public static int getNbAttribut(DBCollection combi,String name){
        int cpt= 0;
-        BasicDBObject query = new BasicDBObject(name,fpHashMap.get(name));
-        DBCursor cursor = coll.find(query);
+        BasicDBObject query = new BasicDBObject("indicator",name);
+        query.put("combination",fpHashMap.get(name));
+        DBCursor cursor = combi.find(query);
+        //System.out.println("query"+query);
         try {
-                while(cursor.hasNext()) {
+                if(cursor.hasNext()) {
                     DBObject doc = cursor.next();
-                    cpt=cpt+Integer.parseInt((String)doc.get("counter"));
+                    cpt=Integer.parseInt((String)doc.get("counter"));
                 }
             }finally {
                 cursor.close();
-            }       
+            }     
         return cpt; 
     } 
 }

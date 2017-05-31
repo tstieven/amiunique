@@ -167,8 +167,8 @@ fp.track1=Oui ! (Vous pouvez être tracé !)
 fp.track2=Presque ! (Vous pouvez très probablement être tracé.)
 fp.track3=Non ! (Il est difficile de vous tracer avec l’empreinte de votre navigateur.)
 
-fp.browser1=% des navigateurs observés sont
-fp.browser2=, comme le vôtre.
+fp.browser1=% des navigateurs observés sont 
+fp.browser2= , comme le vôtre.
 fp.unknownBrow=% des navigateurs observés n’ont pas été identifiés, comme le vôtre.
 
 fp.os1=% des navigateurs observés sont installés sur
