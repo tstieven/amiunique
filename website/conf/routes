@@ -25,7 +25,7 @@ POST        /results2                controllers.FPController.addFingerprint()
 #POST		/results2				 controllers.Main.addFingerprint()
 
 
-POST        /percentages             controllers.StatsController.percentages()
+#POST        /percentages             controllers.StatsController.percentages()
 POST        /stats                   controllers.StatsController.statsTime()
 POST        /evolution/:id           controllers.ExtensionController.addFingerprintFromExtension(id: String)
 POST        /compareFpHistory        controllers.HistoryController.compareFpHistory()

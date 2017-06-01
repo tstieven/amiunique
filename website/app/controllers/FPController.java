@@ -24,6 +24,7 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.List;
 import java.util.Set;
+
 import java.util.Arrays;
 
 import com.mongodb.BasicDBObject;
@@ -86,132 +87,88 @@ public class FPController extends Controller{
 
         return ok(fp.render(request()));
     }
-
+    //To modify
     public static Result fpNoJs() {
-        Http.Cookie cookie = request().cookies().get("amiunique");
-        String id;
-        if(cookie == null){
-            id = "Not supported";
-        } else {
-            id = cookie.value();
-        }
+        System.out.println("addFingerprint");
 
-        //MongoDb's part
-        boolean newFpm;
-        FingerprintManager fpc = new FingerprintManager();
-        DBCollection collection = fpc.connection();
-        Fingerprint fpmongo;
+        //Get FP attributes (body content)
+        JsonNode json = request().body().asJson();
+        
+        connection();
+        listConfig(new File("conf/json"),json);
 
-        FpDataEntityManager em = new FpDataEntityManager();
-        CombinationStatsEntityManager emc = new CombinationStatsEntityManager();
-        FpDataEntity fp;
-        boolean newFp;
+        FpData data = new FpData(json,configHashMap);
+        data.save(collection,combinationStats,nbTotalDB);
+        nbTotal=getNbTotal();
+        nbIdent = getNbIdent(data.fpHashMap);
+        percentages = data.getEachPercentage(combinationStats,nbTotalDB);
+        
+        HashMap<String,Percentages> overview= new HashMap<String,Percentages>();
+        HashMap<String,SuperGraphValues> supergraph= new HashMap<String,SuperGraphValues>();
+        HashMap<String,GraphValues> graph= new HashMap<String,GraphValues>();
+        HashMap<String,Double> details= new HashMap<String,Double>();
+        Parsed parser= new Parsed();
+        FpStats stat= new FpStats();
+        
 
-        String noJS = "no JS";
+       Iterator it=percentages.entrySet().iterator();
+        while (it.hasNext()) {
+            Map.Entry pair = (Map.Entry)it.next();
+            String name = (String)pair.getKey();
+            Double value = ((Double)pair.getValue());
+            String[] config = configHashMap.get(name);
+            int version =0;
+            
+            if (config[14].equals((String)"True")){
+               /* if (name=="userAgentHttp"){//(config[11].equals((String)"True")){
+                    //long a créer
+                    parser.parseOsBrowsers(name,(String)data.fpHashMap.get(name));
+                    String osName= parser.getOs();
+                    String osVersion= parser.getOsVersion();
+                    String browserName = parser.getBrowser();
+                    Str
+                    if (config[8].equals((String)"True")){
+                        overview.put(newName,new Percentages(newName,value,config[12],config[13]));
+                        overview.put(versionName,new Percentages(versionName,value,config[12],config[13]));
+                    }
 
-        if(!id.equals("Not supported") && em.checkIfFPWithNoJsExists(id, getHeader(request(), "User-Agent"),
-                getHeader(request(), "Accept"),getHeader(request(), "Accept-Encoding"),
-                getHeader(request(), "Accept-Language"))){
-            fp = em.getExistingFPById(id);
-            newFp = false;
-        } else {
-            LocalDateTime time = LocalDateTime.now();
-            time = time.truncatedTo(ChronoUnit.HOURS);
+                    if (config[9].equals((String)"True")){
+                        details.put(newName,newPerc(newName));
+                        details.put(versionName,versionPercent(versionName));
+                    }
+                     if (config[10].equals((String)"True")){
+                        supergraph.put(newName, new GraphValues(newName,Json.toJson(stat.getSuperParseAttributStats(collection,name)),newName,versionName,config[7]));
+                    }
 
-            String ip;
-            if(Play.isProd()) {
-                ip = getHeader(request(), "X-Real-IP");
-            } else {
-                ip = request().remoteAddress();
+                }else*/
+                    
+                   String newName= parser.parseAttribut(name,(String)data.fpHashMap.get(name));
+                                       
+                     
+                    if (config[8].equals((String)"True")){
+                        overview.put(newName,new Percentages(newName,value,config[12],config[13]));
+                    }
+                    if (config[9].equals((String)"True")){
+                        details.put(newName,value);
+                    }
+                    if (config[10].equals((String)"True")){
+                        graph.put(newName, new GraphValues(newName,Json.toJson(stat.getParseAttributStats(combinationStats,name,nbTotal)),name,config[7]));
+                    }
+            }else{                
+                if (config[8].equals((String)"True")){
+                    overview.put(name,new Percentages((String)data.fpHashMap.get(name),value,config[12],config[13]));
+                }
+                if (config[9].equals((String)"True")){
+                    details.put(name,value);
+                }
+                if (config[10].equals((String)"True")){
+                    //System.out.println(stat.getAttributStats(combinationStats,name,nbTotal));
+                    graph.put(name, new GraphValues((String)data.fpHashMap.get(name),Json.toJson(stat.getAttributStats(combinationStats,name,nbTotal)),name,config[7]));
+                }       
             }
-            fp = em.createWithoutJavaScript(id,
-                    DigestUtils.sha1Hex(ip), Timestamp.valueOf(time), getHeader(request(),"User-Agent"),
-                    getHeader(request(),"Accept"), getHeader(request(),"Host"), getHeader(request(),"Connection"),
-                    getHeader(request(),"Accept-Encoding"), getHeader(request(),"Accept-Language"),
-                    request().headers().keySet().toString().replaceAll("[,\\[\\]]", ""));
-
-            emc.updateCombinationStats(getHeader(request(),"User-Agent"),
-                    getHeader(request(),"Accept"), getHeader(request(),"Connection"),
-                    getHeader(request(),"Accept-Encoding"), getHeader(request(),"Accept-Language"), request().headers().keySet().toString().replaceAll("[,\\[\\]]", ""),
-                    noJS, noJS, noJS,
-                    noJS, noJS, noJS,
-                    noJS, noJS, noJS,
-                    noJS, noJS, noJS,
-                    noJS, noJS, noJS, noJS);
-
-            newFp = true;
         }
-
-        ObjectNode node = (ObjectNode) Json.toJson(fp);
-
-        //Analyse the user agent
-        ParsedFP parsedFP = new ParsedFP(node.get("userAgentHttp").asText());
-        //Analyse the language and timezone
-        parsedFP.setLanguage(node.get("languageHttp").asText());
-        parsedFP.setTimezone(node.get("timezoneJs").asText());
-        parsedFP.setNbFonts(node.get("fontsFlash").asText());
-
-        node.remove("counter");
-        node.remove("octaneScore");
-        node.remove("sunspiderTime");
-        node.remove("addressHttp");
-        node.remove("time");
-        node.remove("hostHttp");
-        node.remove("connectionHttp");
-        node.remove("orderHttp");
-        node.remove("ieDataJs");
-        node.remove("id");
-        node.remove("vendorWebGljs");
-        node.remove("rendererWebGljs");
-        node.remove("webGlJs");
-        node.remove("canvasJs");
-        node.remove("fontsFlash");
-        node.remove("webGLJsHashed");
-        JsonNode json = (JsonNode) node;
-
-        //Get the stats instance
-        //Stats s = Stats.getInstance();
-        Stats s = new Stats(collection);
-        if(newFp) {
-            //Add the newly parsed FP to the stats
-            s.addFingerprint(parsedFP);
-        }
-
-        //Number of fingerprints
-        Double nbTotal = s.getNbTotal().doubleValue();
-        //Number of identical fingerprints
-        Integer nbIdent = em.getNumberOfIdenticalFingerprints(json);
-        //Get the percentages of every attribute
-        Map<String,Double> percentages = emc.getPercentages(json);
-
-        percentages.put("pluginsJs", percentages.get("pluginsJsHashed"));
-        percentages.put("canvasJs", percentages.get("canvasJsHashed"));
-        percentages.put("fontsFlash", percentages.get("fontsFlashHashed"));
-        percentages.remove("pluginsJsHashed");
-        percentages.remove("canvasJsHashed");
-        percentages.remove("fontsFlashHashed");
-
-        node.put("canvasJs","no JS");
-        node.put("vendorWebGljs","no JS");
-        node.put("rendererWebGljs","no JS");
-        node.put("fontsFlash","no JS");
-
-        //Get some general stats
-        HashMap<String, VersionMap> osMap = s.getOs();
-        HashMap<String, VersionMap> browsersMap = s.getBrowsers();
-        VersionMap langMap = s.getLanguages();
-
-        //Adding percentages for OS and browsers
-        for (Map.Entry<String, VersionMap> entry : osMap.entrySet()) {
-            percentages.put(entry.getKey(),entry.getValue().getCounter()*100/nbTotal);
-        }
-        for (Map.Entry<String, VersionMap> entry : browsersMap.entrySet()) {
-            percentages.put(entry.getKey(),entry.getValue().getCounter()*100/nbTotal);
-        }
-
-        //Render the FP + models.Stats
-        return ok(fpNoJs.render(json, parsedFP, Json.toJson(percentages), Json.toJson(osMap),
-                Json.toJson(browsersMap), Json.toJson(langMap), nbTotal, nbIdent));
+        return ok(results2.render(json,(double)nbTotal,nbIdent,details,overview,graph,supergraph)); 
+        
     }
 
 

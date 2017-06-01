@@ -16,7 +16,7 @@ public class ForceHttps extends Action.Simple {
                     + ctx.request().uri()));
         }
 
-        return delegate.call(ctx);
+        return delegate.call(ctx); 
     }
 
 }

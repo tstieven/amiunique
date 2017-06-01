@@ -32,8 +32,7 @@ public class Application extends Controller {
 
     public static Result jsRoutes(){
         response().setContentType("text/javascript");
-        return ok(Routes.javascriptRouter("jsRoutes", routes.javascript.FPController.addFingerprint(),
-                routes.javascript.StatsController.percentages()));
+        return ok(Routes.javascriptRouter("jsRoutes", routes.javascript.FPController.addFingerprint()));
     }
 
 }
