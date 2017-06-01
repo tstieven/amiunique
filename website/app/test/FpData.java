@@ -65,35 +65,7 @@ public class FpData extends Controller{
         configHashMap= confHashMap;
         throughConfigAddInDB(json);
     }
-
-
-    //Il faudra rajouter quelque chose pour eviter que la meme personne s'enregistre plusieurs fois
-    //Comme à l'origine
-    //Mais c'etait gênant pour les tests
-    public void chooseItself(DBCollection coll, DBCollection combination,DBCollection nbtotal){
-        BasicDBObject query = new BasicDBObject();
-        throughConfigExisting(query); 
-        int bool=0;         
-        DBCursor cursor = coll.find(query);
-        try {
-                if(cursor.hasNext()) {
-
-                    //juste pour les tests
-                    save(coll,combination,nbtotal);
-
-
-
-
-                    System.out.println("not save");
-                }else{
-                    save(coll,combination,nbtotal);
-                    System.out.println("save");
-                }
-            } finally {
-                cursor.close();
-            }      
-    }
-
+   
 
    	public void save(DBCollection coll,DBCollection combination,DBCollection nbtotal){
 			
