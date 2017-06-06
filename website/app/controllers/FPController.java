@@ -1,125 +1,225 @@
 package controllers;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.mongodb.*;
 import models.*;
 import org.apache.commons.codec.digest.DigestUtils;
+import play.Configuration;
 import play.Play;
-import play.libs.Crypto;
 import play.libs.Json;
 import play.mvc.Controller;
 import play.mvc.Http;
 import play.mvc.Result;
 import views.html.fp;
-import views.html.fpNoJs;
-import views.html.results;
 import views.html.results2;
 import views.html.viewFP;
 
 import java.sql.Timestamp;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.UUID;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
-import java.util.Arrays;
 
-import com.mongodb.BasicDBObject;
-import com.mongodb.BulkWriteOperation;
-import com.mongodb.BulkWriteResult;
-import com.mongodb.Cursor;
-import com.mongodb.DB;
-import com.mongodb.DBCollection;
-import com.mongodb.DBCursor;
-import com.mongodb.DBObject;
-import com.mongodb.MongoClient;
-import com.mongodb.ParallelScanOptions;
-import com.mongodb.ServerAddress;
-import com.mongodb.MongoException;
-import com.mongodb.WriteConcern;
-import com.mongodb.MongoCredential;
+public class FPController extends Controller {
 
-import static java.util.concurrent.TimeUnit.SECONDS;
 
-import java.util.Iterator;
-
-import javax.persistence.*;
-
-import java.util.Properties;
-import java.util.Map.Entry;
-
-import java.io.*;
-
-import org.apache.commons.lang3.ArrayUtils;
-
-import java.util.function.Function;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-
-public class FPController extends Controller{
-
-    public static String getHeader(Http.Request request, String header){
-        if(request.getHeader(header) == null){
+    public static String getHeader(Http.Request request, String header) {
+        if (request.getHeader(header) == null) {
             return "Not specified";
         } else {
             return request.getHeader(header);
         }
     }
 
-    public static String getAttribute(JsonNode json, String attribute){
-        if(json.get(attribute) == null){
-            return "Not specified";
+    public static String getId() {
+        Http.Cookie cookie = request().cookies().get("amiunique");
+        String id;
+        if (cookie == null) {
+            id = "Not supported";
         } else {
-            return json.get(attribute).asText();
+            id = cookie.value();
         }
+        return id;
+    }
+
+    public static String getTime() {
+        LocalDateTime time = LocalDateTime.now();
+        time = time.truncatedTo(ChronoUnit.HOURS);
+        return Timestamp.valueOf(time).toString();
+    }
+
+    public static String getIp() {
+        String ip;
+        if (Play.isProd()) {
+            ip = getHeader(request(), "X-Real-IP");
+        } else {
+            ip = request().remoteAddress();
+        }
+        return DigestUtils.sha1Hex(ip);
+    }
+
+
+    public static HashMap<String, HashMap<String, String>> configHashMap = new HashMap<String, HashMap<String, String>>();
+
+    private static DBCollection collection;
+    private static DBCollection combinationStats;
+    private static DBCollection nbTotalDB;
+    //TODO a dégager d'ici
+    //et essayer de le faire lors du démarrage.
+    //Attention probleme de concurrence
+    public static int nbTotal;
+    public static int nbIdent;
+    public static HashMap<String, Double> percentages = new HashMap<String, Double>();
+
+
+    //TODO
+    //Une seule connection lors du demarrage du serveur
+    //Voir meme dans le fichier de config
+    //return a collection of MongoDB's database,
+    public static void connection() {
+        try {
+
+            String s = "spirals";
+            char[] pwd = s.toCharArray();
+            MongoCredential credential = MongoCredential.createCredential("root", "test", pwd);
+
+            // To connect to mongodb server
+            MongoClient mongoClient = new MongoClient(new ServerAddress("localhost", 27017), Arrays.asList(credential));
+
+            // Now connect to your databases
+
+            DB db = mongoClient.getDB("test");
+            System.out.println("Connect to database successfully");
+
+            collection = db.getCollection("testCollection");
+            combinationStats = db.getCollection("combinationStats");
+            nbTotalDB = db.getCollection("nbTotal");
+
+        } catch (Exception e) {
+            System.err.println(e.getClass().getName() + ": " + e.getMessage());
+        }
+    }
+
+
+    //use SearchInConfig in every file of a repertory
+    public static void listConfig() {
+        Map<String, Object> lu = Configuration.root().asMap();
+        configHashMap = (HashMap<String, HashMap<String, String>>) lu.get("json");
+    }
+
+    //Prend le nb le plus petit des attributs de la configuration
+    //Mais ne calcul pas le nb de la combinaison d'attributs
+    //Ainsi nb ne peut être que plus grand que celui qu'il devrait etre.
+    //Il n'y a donc pas de probleme de pourcentage supérieur à 100
+    public static int getNbTotal() {
+        int cpt = 0;
+        int enable = 1;
+        BasicDBObject query = new BasicDBObject();
+        DBCursor cursor = nbTotalDB.find(query);
+
+        while (cursor.hasNext()) {
+            DBObject doc = cursor.next();
+            if (configHashMap.get(doc.get("indicator")).get("enable").equals("True")) {
+
+                int a = Integer.parseInt((String) doc.get("counter"));
+                if (enable == 1) {
+                    enable = 0;
+                    cpt = a;
+                } else {
+                    if (cpt > a) {
+                        cpt = a;
+                    }
+                }
+            }
+        }
+        cursor.close();
+        return cpt;
+    }
+
+    public static int getNbIdent(BasicDBObject query) {
+        int cpt = 0;
+        DBCursor cursor = collection.find(query);
+
+        while (cursor.hasNext()) {
+
+            DBObject doc = cursor.next();
+            cpt++;
+        }
+        cursor.close();
+        return cpt;
+    }
+
+    public static BasicDBObject getQuery(HashMap<String, Object> hashMap) {
+        BasicDBObject query = new BasicDBObject();
+        Iterator it = hashMap.entrySet().iterator();
+        while (it.hasNext()) {
+            Map.Entry pair = (Map.Entry) it.next();
+            String name = (String) pair.getKey();
+            if ((name != "id") && (name != "ip") && (name != "time")) {
+                HashMap<String, String> config = configHashMap.get(name);
+                System.out.println(name);
+                if ((config.get("enable").equals("True")) && (config.get("use in comparison").equals("True"))) {
+                    query.put(name, pair.getValue());
+                }
+            }
+        }
+        return query;
     }
 
     public static Result fp() {
 
-        
-        if(request().cookies().get("amiunique") == null){            
-            response().setCookie("amiunique", UUID.randomUUID().toString(),60*60*24*120,"/","amiunique.org",true,true);
-            response().setCookie("tempReturningVis","temp",60*60*12);
+
+        if (request().cookies().get("amiunique") == null) {
+            response().setCookie("amiunique", UUID.randomUUID().toString(), 60 * 60 * 24 * 120, "/", "amiunique.org", true, true);
+            response().setCookie("tempReturningVis", "temp", 60 * 60 * 12);
         }
 
         return ok(fp.render(request()));
     }
-    //To modify
-    public static Result fpNoJs() {
-        System.out.println("addFingerprint");
+
+    /*public static Result fpNoJs(){
+         System.out.println("addFingerprint");
 
         //Get FP attributes (body content)
         JsonNode json = request().body().asJson();
-        
+
+
+
+        //TODO
+        //Faire une fois seulement lors du démarrage du serveur
         connection();
-        listConfig(new File("conf/json"),json);
+        listConfig();
+
 
         FpData data = new FpData(json,configHashMap);
+        //TODO
+        //verifier si l'empreinte n'existe pas deja
         data.save(collection,combinationStats,nbTotalDB);
+        BasicDBObject query=getQuery(data.fpHashMap);
         nbTotal=getNbTotal();
-        nbIdent = getNbIdent(data.fpHashMap);
+        nbIdent = getNbIdent(query);
+
         percentages = data.getEachPercentage(combinationStats,nbTotalDB);
-        
+
+
+        //Global.print();//get("fontsFlash")[8]);
+
         HashMap<String,Percentages> overview= new HashMap<String,Percentages>();
         HashMap<String,SuperGraphValues> supergraph= new HashMap<String,SuperGraphValues>();
         HashMap<String,GraphValues> graph= new HashMap<String,GraphValues>();
         HashMap<String,Double> details= new HashMap<String,Double>();
         Parsed parser= new Parsed();
         FpStats stat= new FpStats();
-        
+System.out.println(configHashMap);
 
        Iterator it=percentages.entrySet().iterator();
         while (it.hasNext()) {
             Map.Entry pair = (Map.Entry)it.next();
             String name = (String)pair.getKey();
             Double value = ((Double)pair.getValue());
-            String[] config = configHashMap.get(name);
-            int version =0;
-            
-            if (config[14].equals((String)"True")){
+            HashMap<String,String> config = configHashMap.get(name);
+
+            if (config.get("parse").equals((String)"True")){
                /* if (name=="userAgentHttp"){//(config[11].equals((String)"True")){
                     //long a créer
                     parser.parseOsBrowsers(name,(String)data.fpHashMap.get(name));
@@ -141,187 +241,69 @@ public class FPController extends Controller{
                     }
 
                 }else*/
-                    
-                   String newName= parser.parseAttribut(name,(String)data.fpHashMap.get(name));
-                                       
-                     
-                    if (config[8].equals((String)"True")){
-                        overview.put(newName,new Percentages(newName,value,config[12],config[13]));
+
+                   /*String newName= parser.parseAttribut(name,(String)data.fpHashMap.get(name));
+
+
+                    if (config.get("overview").equals("True")){
+                        overview.put(newName,new Percentages(newName,value,config.get("sentence1"),config.get("sentence2")));
                     }
-                    if (config[9].equals((String)"True")){
+                    if (config.get("details").equals("True")){
                         details.put(newName,value);
                     }
-                    if (config[10].equals((String)"True")){
-                        graph.put(newName, new GraphValues(newName,Json.toJson(stat.getParseAttributStats(combinationStats,name,nbTotal)),name,config[7]));
+                    if (config.get("graph").equals("True")){
+                        graph.put(newName, new GraphValues(newName,Json.toJson(stat.getParseAttributStats(combinationStats,name,nbTotal)),name,config.get("display")));
                     }
-            }else{                
-                if (config[8].equals((String)"True")){
-                    overview.put(name,new Percentages((String)data.fpHashMap.get(name),value,config[12],config[13]));
+            }else{
+                if (config.get("overview").equals("True")){
+                    overview.put(name,new Percentages((String)data.fpHashMap.get(name),value,config.get("sentence1"),config.get("sentence2")));
                 }
-                if (config[9].equals((String)"True")){
+                if (config.get("details").equals("True")){
                     details.put(name,value);
                 }
-                if (config[10].equals((String)"True")){
-                    //System.out.println(stat.getAttributStats(combinationStats,name,nbTotal));
-                    graph.put(name, new GraphValues((String)data.fpHashMap.get(name),Json.toJson(stat.getAttributStats(combinationStats,name,nbTotal)),name,config[7]));
-                }       
-            }
-        }
-        return ok(results2.render(json,(double)nbTotal,nbIdent,details,overview,graph,supergraph)); 
-        
-    }
-
-
-
-    public static HashMap<String,String[]> configHashMap= new HashMap<String,String[]>(); 
-    private static DBCollection collection;
-    private static DBCollection combinationStats;
-    private static DBCollection nbTotalDB;
-    public static int nbTotal;
-    public static int nbIdent;
-    public static HashMap<String,Double> percentages = new HashMap<String,Double>() ;
-
-
-
-    //return a collection of MongoDB's database,
-    public static void connection(){
-        try{
-
-            String s = "spirals";
-            char [] pwd = s.toCharArray();
-            MongoCredential credential =  MongoCredential.createCredential("root", "test", pwd);
-
-            // To connect to mongodb server
-            MongoClient mongoClient = new MongoClient(new ServerAddress("localhost",27017), Arrays.asList(credential));
-
-             // Now connect to your databases
-             
-             DB db = mongoClient.getDB( "test" );
-            System.out.println("Connect to database successfully");
-
-            collection = db.getCollection("testCollection");
-            combinationStats=db.getCollection("combinationStats");
-            nbTotalDB=db.getCollection("nbTotal");
-            
-             }catch(Exception e){
-         System.err.println( e.getClass().getName() + ": " + e.getMessage() );
-      }
-    }
-
-   
-    //use SearchInConfig in every file of a repertory
-    public static void listConfig(File path, JsonNode json){
-        File files[];
-        int indentLevel= 0;
-        files = path.listFiles();
-        Arrays.sort(files);
-        for (int i = 0, n = files.length; i < n; i++) {
-          for (int indent = 0; indent < indentLevel; indent++) {
-            System.out.print("  ");
-          }
-          searchInConfig(files[i].toString(),json);
-         
-        }
-    }
-
-    //get value in a .json 
-    public static void searchInConfig(String path,JsonNode json){
-        
-        JsonNode myJson= null;
-        
-        try {
-          InputStream is =new FileInputStream(path);
-          myJson = Json.parse(is);
-        } catch (FileNotFoundException e) {
-          e.printStackTrace();
-        } catch (IOException e) {
-          e.printStackTrace();
-        }
-        
-        String name = getAttribute(myJson,"name");
-        String[] val = new String[] {getAttribute(myJson,"script"),getAttribute(myJson,"enable"),getAttribute(myJson,"hash"),
-        getAttribute(myJson,"use in comparison"),getAttribute(myJson,"async"),getAttribute(myJson,"jsrequired"),
-        getAttribute(myJson,"flashrequired"),getAttribute(myJson,"display"),getAttribute(myJson,"overview"),
-        getAttribute(myJson,"details"),getAttribute(myJson,"graph"),getAttribute(myJson,"supergraph"),
-        getAttribute(myJson,"sentence1"),getAttribute(myJson,"sentence2"),getAttribute(myJson,"parse")};
-        configHashMap.put(name,val);
-    }
-
-    public static int getNbTotal(){
-        int cpt= 0;
-        BasicDBObject query = new BasicDBObject();
-        DBCursor cursor = nbTotalDB.find(query);
-        try {
-                while(cursor.hasNext()) {
-                    DBObject doc = cursor.next();
-                    cpt=Integer.parseInt((String)doc.get("counter"));
-                }
-            }finally {
-                cursor.close();
-            }       
-        return cpt;
-    }
-
-    public static int getNbIdent(HashMap<String,Object>hashMap){
-        int cpt= 0;
-        BasicDBObject query = new BasicDBObject();
-        Iterator it=hashMap.entrySet().iterator();
-        while (it.hasNext()) {
-            Map.Entry pair = (Map.Entry)it.next();
-            String name = (String)pair.getKey();
-            if ((name!="id")&&(name!="ip")&&(name!="time")){
-                String[] config = configHashMap.get(name);
-                //System.out.println(name);
-                if ((config[1].equals((String)"True"))&&(config[3].equals((String)"True"))){
-                    query.put((String)name, ((String)pair.getValue()));
+                if (config.get("graph").equals("True")){
+                    graph.put(name, new GraphValues((String)data.fpHashMap.get(name),Json.toJson(stat.getAttributStats(combinationStats,name,nbTotal)),name,config.get("display")));
                 }
             }
         }
-        DBCursor cursor = collection.find(query);
-        try {
-                while(cursor.hasNext()) {
-                    
-                    DBObject doc = cursor.next();
-                    cpt++;
-                }
-            }finally {
-                cursor.close();
-            }    
-        return cpt;
-    }
+        return ok(results2.render(json,(double)nbTotal,nbIdent,details,overview,graph,supergraph));
+    }*/
 
     public static Result addFingerprint() {
         System.out.println("addFingerprint");
 
         //Get FP attributes (body content)
         JsonNode json = request().body().asJson();
-        
+
+        //TODO
+        //Faire une fois seulement lors du démarrage du serveur
+
+
         connection();
-        listConfig(new File("conf/json"),json);
+        listConfig();
 
-        FpData data = new FpData(json,configHashMap);
-        data.save(collection,combinationStats,nbTotalDB);
-        nbTotal=getNbTotal();
-        nbIdent = getNbIdent(data.fpHashMap);
-        percentages = data.getEachPercentage(combinationStats,nbTotalDB);
-        
-        HashMap<String,Percentages> overview= new HashMap<String,Percentages>();
-        HashMap<String,SuperGraphValues> supergraph= new HashMap<String,SuperGraphValues>();
-        HashMap<String,GraphValues> graph= new HashMap<String,GraphValues>();
-        HashMap<String,Double> details= new HashMap<String,Double>();
-        Parsed parser= new Parsed();
-        FpStats stat= new FpStats();
-        
+        FpData data = new FpData(json, configHashMap);
+        data.save(collection, combinationStats, nbTotalDB);
+        BasicDBObject query = getQuery(data.fpHashMap);
+        nbTotal = getNbTotal();
+        nbIdent = getNbIdent(query);
+        percentages = data.getEachPercentage(combinationStats, nbTotalDB);
 
-       Iterator it=percentages.entrySet().iterator();
+        HashMap<String, Percentages> overview = new HashMap<String, Percentages>();
+        HashMap<String, SuperGraphValues> supergraph = new HashMap<String, SuperGraphValues>();
+        HashMap<String, GraphValues> graph = new HashMap<String, GraphValues>();
+        HashMap<String, Double> details = new HashMap<String, Double>();
+        Parsed parser = new Parsed();
+        FpStats stat = new FpStats();
+
+        Iterator it = percentages.entrySet().iterator();
         while (it.hasNext()) {
-            Map.Entry pair = (Map.Entry)it.next();
-            String name = (String)pair.getKey();
-            Double value = ((Double)pair.getValue());
-            String[] config = configHashMap.get(name);
-            int version =0;
-            
-            if (config[14].equals((String)"True")){
+            Map.Entry pair = (Map.Entry) it.next();
+            String name = (String) pair.getKey();
+            Double value = ((Double) pair.getValue());
+            HashMap<String, String> config = configHashMap.get(name);
+
+            if (config.get("parse").equals((String) "True")) {
                /* if (name=="userAgentHttp"){//(config[11].equals((String)"True")){
                     //long a créer
                     parser.parseOsBrowsers(name,(String)data.fpHashMap.get(name));
@@ -343,33 +325,33 @@ public class FPController extends Controller{
                     }
 
                 }else*/
-                    
-                   String newName= parser.parseAttribut(name,(String)data.fpHashMap.get(name));
-                                       
-                     
-                    if (config[8].equals((String)"True")){
-                        overview.put(newName,new Percentages(newName,value,config[12],config[13]));
-                    }
-                    if (config[9].equals((String)"True")){
-                        details.put(newName,value);
-                    }
-                    if (config[10].equals((String)"True")){
-                        graph.put(newName, new GraphValues(newName,Json.toJson(stat.getParseAttributStats(combinationStats,name,nbTotal)),name,config[7]));
-                    }
-            }else{                
-                if (config[8].equals((String)"True")){
-                    overview.put(name,new Percentages((String)data.fpHashMap.get(name),value,config[12],config[13]));
+
+                String newName = parser.parseAttribute(name, (String) data.fpHashMap.get(name));
+
+
+                if (config.get("overview").equals("True")) {
+                    overview.put(newName, new Percentages(newName, value, config.get("sentence1"), config.get("sentence2")));
                 }
-                if (config[9].equals((String)"True")){
-                    details.put(name,value);
+                if (config.get("details").equals("True")) {
+                    details.put(newName, value);
                 }
-                if (config[10].equals((String)"True")){
-                    //System.out.println(stat.getAttributStats(combinationStats,name,nbTotal));
-                    graph.put(name, new GraphValues((String)data.fpHashMap.get(name),Json.toJson(stat.getAttributStats(combinationStats,name,nbTotal)),name,config[7]));
-                }       
+                if (config.get("graph").equals("True")) {
+                    graph.put(newName, new GraphValues(newName, Json.toJson(stat.getParseAttributeStats(combinationStats, name, nbTotal)), name, config.get("display")));
+                }
+            } else {
+                if (config.get("overview").equals("True")) {
+                    overview.put(name, new Percentages((String) data.fpHashMap.get(name), value, config.get("sentence1"), config.get("sentence2")));
+                }
+                if (config.get("details").equals("True")) {
+                    details.put(name, value);
+                }
+                if (config.get("graph").equals("True")) {
+                    graph.put(name, new GraphValues((String) data.fpHashMap.get(name), Json.toJson(stat.getAttributeStats(combinationStats, name, nbTotal)), name, config.get("display")));
+                }
             }
         }
-        return ok(results2.render(json,(double)nbTotal,nbIdent,details,overview,graph,supergraph)); 
+
+        return ok(results2.render(json, (double) nbTotal, nbIdent, details, overview, graph, supergraph));
     }
 
     public static Result viewFP() {

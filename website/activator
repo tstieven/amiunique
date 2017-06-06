@@ -174,7 +174,7 @@ detect_terminal_for_ui() {
   }
 }
 
-# Processes incoming arguments and places them in appropriate global variables.  called by the run method.
+# Processes incoming arguments and places them in appropriate fs variables.  called by the run method.
 process_args () {
   while [[ $# -gt 0 ]]; do
     case "$1" in

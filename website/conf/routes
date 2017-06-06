@@ -5,7 +5,7 @@
 # Home page
 GET         /                        controllers.Application.home()
 GET         /fp                      controllers.FPController.fp()
-GET         /fpNoJs                  controllers.FPController.fpNoJs()
+GET         /fpNoJs                  controllers.FPController.fp()
 GET         /viewFP                  controllers.FPController.viewFP()
 #GET         /stats                   controllers.StatsController.stats()
 GET         /history                 controllers.HistoryController.history()
