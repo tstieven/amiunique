@@ -1,5 +1,5 @@
 @import com.fasterxml.jackson.databind.JsonNode
-@(fp : JsonNode)(nbTotal: Double)(nbIdent: Integer)(permap : HashMap[String,Double])(overview : HashMap[String,Percentages])(graph : HashMap[String,GraphValues])(supergraph : HashMap[String,SuperGraphValues])
+@(nbTotal: Double)(nbIdent: Integer)(detail : HashMap[String,Detail])(overview : HashMap[String,Percentages])(graph : HashMap[String,GraphValues])(supergraph : HashMap[String,SuperGraphValues])(plugins : HashMap[String,Double])
 
 <style>
 [rel="popover"]{
@@ -11,12 +11,14 @@ td:nth-child(3){
     word-break:break-all;
 }
 
+
 </style>
 
 <script>
 $(document).ready(function() {
     $("[rel=popover]").popover({'trigger':'hover'});
 });
+
 
 </script>
 
@@ -30,12 +32,15 @@ $(document).ready(function() {
     $("#graBut").on('click',function(){
         $("#graTab" ).click();
     });
+
 </script>
 
 
 <ul class="nav nav-tabs" role="tablist">
-    <li class="active"><a class="colored-tabs" href="#overview" role="tab" data-toggle="tab">@Messages("fp.overview")</a></li>
-    <li><a id="detTab" class="colored-tabs" href="#details" role="tab" data-toggle="tab">@Messages("fp.details")</a></li>
+    <li class="active"><a class="colored-tabs" href="#overview" role="tab"
+                          data-toggle="tab">@Messages("fp.overview")</a></li>
+    <li><a id="detTab" class="colored-tabs" href="#details" role="tab" data-toggle="tab">@Messages("fp.details")</a>
+    </li>
     <li><a id="graTab" class="colored-tabs" href="#grap" role="tab" data-toggle="tab">@Messages("fp.graphs")</a></li>
 </ul>
 
@@ -45,28 +50,29 @@ $(document).ready(function() {
 
         <!-- Uniqueness -->
         @if(nbIdent<2) {
-            <h1 style="color:red"><strong>@Messages("fp.track1")</strong></h1>
+        <h1 style="color:red"><strong>@Messages("fp.track1")</strong></h1>
         } else {
-            @if(nbIdent/nbTotal < 0.05) {
-                <h1 style="color:orange">@Messages("fp.track2")</h1>
-            } else {
-                <h1 style="color:green">@Messages("fp.track3")</h1>
-            }
+        @if(nbIdent/nbTotal < 0.05) {
+        <h1 style="color:orange">@Messages("fp.track2")</h1>
+        } else {
+        <h1 style="color:green">@Messages("fp.track3")</h1>
         }
-        @for((key,value) <- overview){ 
-            @if(key != "Others"){      
-                <p>@{"%.2f".format(value.getPercentages)} @Messages(value.getSentence1)<strong>@value.getName()</strong>@Messages(value.getSentence2)</p>
-            }
+        }
+        @for((key,value) <- overview){
+        @if(key != "Others"){
+        <p>@{"%.2f".format(value.getPercentages)} @Messages(value.getSentence1)<strong>@value.getName()</strong>@Messages(value.getSentence2)
+        </p>
+        }
         }
 
 
         <!-- Uniqueness details-->
         @if(nbIdent<2) {
-            <p>@Html(Messages("fp.uniq1")) @("%.0f".format(nbTotal)) @Messages("fp.uniq2") @Html(Messages("fp.uniq3"))</p>
+        <p>@Html(Messages("fp.uniq1")) @("%.0f".format(nbTotal)) @Messages("fp.uniq2") @Html(Messages("fp.uniq3"))</p>
 
         } else {
-            <p> @Html(Messages("fp.notuniq1")) @nbIdent @Messages("fp.notuniq2") @("%.0f".format(nbTotal))
-                @Messages("fp.notuniq3") (@{"%.2f".format(nbIdent*100.0/nbTotal)} @Messages("fp.notuniq4")</p>
+        <p> @Html(Messages("fp.notuniq1")) @nbIdent @Messages("fp.notuniq2") @("%.0f".format(nbTotal))
+            @Messages("fp.notuniq3") (@{"%.2f".format(nbIdent*100.0/nbTotal)} @Messages("fp.notuniq4")</p>
         }
 
         <p>
@@ -81,32 +87,57 @@ $(document).ready(function() {
 
     <div class="tab-pane fade" id="details">
         <h1>@Messages("fp.detailsTitle")</h1>
-        
+
         <div class="table-responsive">
             <table class="table table-striped table-hover">
                 <thead>
-                    <tr>
-                        <th>@Messages("fp.detAtt")</th>
-                        <th>@Messages("fp.detSim")  <i class="fa fa-info-circle fa-2" rel="popover"
-                            data-content="@Messages("fp.detSimExp")"></i></th>
-                        <th>@Messages("fp.detVal")</th>
-                    </tr>
+                <tr>
+                    <th>@Messages("fp.detAtt")</th>
+                    <th>@Messages("fp.detSim") <i class="fa fa-info-circle fa-2" rel="popover"
+                                                  data-content="@Messages(" fp.detSimExp")"></i></th>
+                    <th>@Messages("fp.detVal")</th>
+                </tr>
                 </thead>
                 <tbody>
-                    @display(column : String) = {
-                        <td id="@column.toString().concat("Permap")">@{"%.2f".format(permap.get(column))}</td>
-                        <td id="@column.toString().concat("Val")">@fp.get(column)</td>
-                    }
+                @display(column : String) = {
 
-                    @for((key,value) <- permap){ 
-                    <tr id=key>
-                        <td>@Messages(key) <i class="fa fa-info-circle fa-2" rel="popover" data-content="@Messages("test")"></i></td>
-                        
-                        @display(column = key)
-                     
-                        
-                    </tr>  
+                <td id="@column.toString().concat("Detail")">@{"%.2f".format(detail.get(column).getValue())} %</td>
+                <td id="@column.toString().concat("Val")">@{detail.get(column).getName()} </td>
+                }
+
+                @for((key,value) <- detail){
+                    @if(value.getIndicator() != "canvasJs") {
+                        <tr id=key>
+                            <td>@Messages(value.getIndicator()) <i class="fa fa-info-circle fa-2" rel="popover" data-content="@Messages(" test")"></i>
+                            </td>
+
+                            @display(column = key)
+
+                        </tr>
+                            @if(value.getIndicator() == "pluginsJs"){
+                                @if((value.getName() != "Not specified")&&(value.getName() != "")){
+                                    <tr><td style="font-weight:bold;" colspan="3">@Messages("fp.detailPlugins")</td></tr>
+                                    <tr><td colspan="3"></td></tr>
+                                    @for((key,value)<-plugins){
+                                     <tr><td></td><td>@{"%.2f".format(value)} % </td><td>@Messages(key)</td></tr>
+                                    }
+                                    <tr><td colspan="3"></td></tr>
+                                }
+                            }
+                    } else {
+                         <tr id=key>
+                            <td>@Messages(value.getIndicator()) <i class="fa fa-info-circle fa-2" rel="popover" data-content="@Messages(" test")"></i>
+                            </td>
+                             <td id="@value.getIndicator().toString().concat("Detail")">@{"%.2f".format(detail.get(key).getValue())} %</td>
+                             <td id="@value.getIndicator().toString().concat("Val")">@{detail.get(key).getName()} </td>
+
+                         </tr>
                     }
+                }
+
+
+
+
                 </tbody>
             </table>
         </div>
@@ -116,7 +147,7 @@ $(document).ready(function() {
         <div class="col-md-4">
             <h1>@Messages("fp.graphsTitle")</h1>
             <i class="fa fa-info-circle fa-3" rel="popover"
-                data-content="@Messages("fp.graphsExp")"></i>
+               data-content="@Messages(" fp.graphsExp")"></i>
             <script type="application/javascript">
             
 
@@ -201,6 +232,9 @@ $(document).ready(function() {
 
 
                 }
+
+
+
                 @for((key,value) <- graph){  
                     var timeData = '@{Html(graph.get(key).getJson().toString())}'
                     
@@ -252,15 +286,15 @@ $(document).ready(function() {
                               
             
                
-            </script> 
-            @for((key,value) <- supergraph){
-             <div id='@{Html(supergraph.get(key).getGraphName().toString())}' style="height: auto; width: auto"></div>
-            } 
 
-            @for((key,value) <- graph){ 
-            
-                <div id= '@{Html(graph.get(key).getGraphName().toString())}' style="height: auto; width: auto"></div>   
-            }   
+            </script>
+            @for((key,value) <- supergraph){
+            <div id='@{Html(supergraph.get(key).getGraphName().toString())}' style="height: auto; width: auto"></div>
+            }
+
+            @for((key,value) <- graph){
+            <div id='@{Html(graph.get(key).getGraphName().toString())}' style="height: auto; width: auto"></div>
+            }
 
         </div>
     </div>
