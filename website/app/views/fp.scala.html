@@ -38,18 +38,22 @@
                                
                 $("#progress").remove();
                 //We add every percentages to the main page
+                try {
 
-                            if(canvasData.indexOf("Not supported") == -1) {
-                                //Display of canvas objects
-                                document.getElementById ("canvasJsVal").innerHTML = '<canvas id="canvas1" height="60" width="400"></canvas>' ;
-                                var canContext = document.getElementById ("canvas1").getContext("2d");
-                                var canImage = new Image();
-                                canImage.onload = function(){
-                                    canContext.drawImage(this, 0, 0);
-                                };
-                                canImage.src = canvasData;
-                            }
-                            $("#graphs" ).show();
+                    if (canvasData.indexOf("Not supported") == -1) {
+                        //Display of canvas objects
+                        document.getElementById("canvasJsVal").innerHTML = '<canvas id="canvas1" height="60" width="400"></canvas>' ;
+                        var canContext = document.getElementById("canvas1").getContext("2d");
+                        var canImage = new Image();
+                        canImage.onload = function () {
+                            canContext.drawImage(this, 0, 0);
+                        };
+                        canImage.src = canvasData;
+                    }
+                    $("#graphs").show();
+                }catch(err) {
+                    console.log("no canvas");
+                }
 
 
 
@@ -95,18 +99,22 @@
                                 localStorage.setItem("tempFpContent", res);
                             }
                             $('#content').html(res);
+                            try {
 
-                            if(canvasData.indexOf("Not supported") == -1) {
-                                //Display of canvas objects
-                                document.getElementById ("canvasJsVal").innerHTML = '<canvas id="canvas1" height="60" width="400"></canvas>' ;
-                                var canContext = document.getElementById ("canvas1").getContext("2d");
-                                var canImage = new Image();
-                                canImage.onload = function(){
-                                    canContext.drawImage(this, 0, 0);
-                                };
-                                canImage.src = canvasData;
+                                if (canvasData.indexOf("Not supported") == -1) {
+                                    //Display of canvas objects
+                                    document.getElementById("canvasJsVal").innerHTML = '<canvas id="canvas1" height="60" width="400"></canvas>' ;
+                                    var canContext = document.getElementById("canvas1").getContext("2d");
+                                    var canImage = new Image();
+                                    canImage.onload = function () {
+                                        canContext.drawImage(this, 0, 0);
+                                    };
+                                    canImage.src = canvasData;
+                                }
+                                $("#graphs").show();
+                            }catch(err){
+                                console.log("no canvas");
                             }
-                            $("#graphs" ).show();
 
                         },
                         error: function(jqXHR, textStatus, errorThrown) {

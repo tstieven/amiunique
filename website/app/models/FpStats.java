@@ -12,7 +12,7 @@ import java.util.HashMap;
 public class FpStats {
 
     //return an HashMap with a value of an attribute as key, and the percentages of its presence as value
-    //the hashmap contains every value in the database of an attribute
+    //the hashmap contains every value of an attribute in the database
     public HashMap<String, Double> getAttributeStats(DBCollection coll, String attr, int nbtotal) {
 
         HashMap<String, Double> fpAttributeStats = new HashMap<String, Double>();
@@ -25,13 +25,14 @@ public class FpStats {
             int cpt = Integer.parseInt((String) getDoc.get("counter"));
             String value = (String) getDoc.get("combination");
             fpAttributeStats.put(value, (double) cpt / (double) nbtotal);
-            cursor.close();
+
         }
+        cursor.close();
         return fpAttributeStats;
     }
 
-    //return an HashMap with a parse value of an attribute as key, and the percentages of its presence as value
-    //the hashmap contains every value in the database of an attribute
+    //return an HashMap with a parsed value of an attribute as key, and the percentages of its presence as value
+    //the hashmap contains every value of an attribute in the database
     public HashMap<String, Double> getParseAttributeStats(DBCollection coll, String attr, int nbtotal) {
 
         HashMap<String, Double> fpAttributeStats = new HashMap<String, Double>();

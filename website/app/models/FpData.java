@@ -117,11 +117,12 @@ public class FpData {
     private static List<String> getPluginsInList() {
 
         List<String> listPlugins = new ArrayList<>();
+        System.out.println(configHashMap.get("pluginsJs"));
         if (configHashMap.get("pluginsJs").get(configEnable).equals("True")) {
 
             String patternStringPlugin = "Plugin [0-9]+: ([a-zA-Z -.]+)";
             Pattern pattern = Pattern.compile(patternStringPlugin);
-            Matcher matcher = pattern.matcher((String) fpHashMap.get("pluginsJs"));
+            Matcher matcher = pattern.matcher((String) fpHashMap.get("plugins"+"Js"));
             while (matcher.find()) {
                 listPlugins.add(matcher.group(1));
             }

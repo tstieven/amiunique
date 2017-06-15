@@ -15,6 +15,7 @@ import views.html.fpNoJs;
 import views.html.results2;
 import views.html.viewFP;
 
+import java.io.*;
 import java.sql.Timestamp;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
@@ -41,9 +42,11 @@ public class FPController extends Controller {
     private static final String configSentence2 = "sentence2";
     private static final String configTitle = "display";
     private static final String configParse = "parse";
+    private static final String configHashed = "hash";
 
 
-    public static String getHeader(Http.Request request, String header) {
+
+    private static String getHeader(Http.Request request, String header) {
         if (request.getHeader(header) == null) {
             return "Not specified";
         } else {
@@ -78,11 +81,61 @@ public class FPController extends Controller {
         return DigestUtils.sha1Hex(ip);
     }
 
+    public static String getAttribute(JsonNode json, String attribute) {
+        if (json.get(attribute) == null) {
+            return "Not specified";
+        } else {
+            return json.get(attribute).asText();
+        }
+    }
+
+    private static void searchInConfig(String path) {
+
+        JsonNode myJson = null;
+
+        try {
+            InputStream is = new FileInputStream(path);
+            myJson = Json.parse(is);
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        String name = getAttribute(myJson, "name");
+        HashMap<String, String> val= new HashMap<>();
+        val.put(configEnable,getAttribute(myJson,configEnable));
+        val.put(configComparison,getAttribute(myJson,configComparison));
+        val.put(configDetails,getAttribute(myJson,configDetails));
+        val.put(configGraph,getAttribute(myJson,configGraph));
+        val.put(configOverview,getAttribute(myJson,configOverview));
+        val.put(configParse,getAttribute(myJson,configParse));
+        val.put(configSentence1,getAttribute(myJson,configSentence1));
+        val.put(configSentence2,getAttribute(myJson,configSentence2));
+        val.put(configHashed,getAttribute(myJson,configHashed));
+        val.put(configTitle,getAttribute(myJson,configTitle));
+        configHashMap.put(name, val);
+    }
+
+    private static void listConfig(File path) {
+        File files[];
+        int indentLevel = 0;
+        files = path.listFiles();
+        Arrays.sort(files);
+        for (int i = 0, n = files.length; i < n; i++) {
+            for (int indent = 0; indent < indentLevel; indent++) {
+                System.out.print("  ");
+            }
+            searchInConfig(files[i].toString());
+
+        }
+    }
+
     //set MongoDB's collections and configHashMap
     //everytime the server is turning on, this function has to be called in fpNoJs() or addFingerprint()
     public static void connection() {
         Map<String, Object> lu = Configuration.root().asMap();
-        configHashMap = (HashMap<String, HashMap<String, String>>) lu.get("json");
+        listConfig(new File("conf/json"));
         try {
             HashMap<String, Object> mongoConfig = (HashMap<String, Object>) lu.get("mongo");
             String s = (String) mongoConfig.get("password");
@@ -142,15 +195,14 @@ public class FPController extends Controller {
 
     //return the number of identical fingerprint
     private static int getNbIdent(BasicDBObject query) {
-        int cpt = 0;
         DBCursor cursor = collection.find(query);
-        cpt = cursor.length();
+        int cpt = cursor.length();
         cursor.close();
         return cpt;
     }
 
     // return a query for searching identical fingerprint
-    public static BasicDBObject buildComparisonQuery(HashMap<String, Object> hashMap) {
+    private static BasicDBObject buildComparisonQuery(HashMap<String, Object> hashMap) {
         BasicDBObject query = new BasicDBObject();
         Iterator it = hashMap.entrySet().iterator();
         while (it.hasNext()) {
@@ -211,7 +263,7 @@ public class FPController extends Controller {
             Double value = ((Double) pair.getValue());
             HashMap<String, String> config = configHashMap.get(name);
 
-            if (config.get(configParse).equals((String) "True")) {
+            if (config.get(configParse).equals("True")) {
                /* if (name=="userAgentHttp"){//(config[11].equals((String)"True")){
                     //long a créer
                     parser.parseOsBrowsers(name,(String)data.fpHashMap.get(name));
@@ -343,6 +395,8 @@ public class FPController extends Controller {
                 }
             }
         }
+        //System.out.println(configHashMap);
+        System.out.println(data.fpHashMap);
 
         HashMap<String, Double> plugins = data.saveAndGetPluginsStatsInHashMap(combinationStats);
 
