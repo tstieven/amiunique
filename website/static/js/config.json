@@ -1,0 +1,182 @@
+[
+	{
+		"file" : "aaaa",
+		"enable" : "True"
+	},
+	{
+		"file" : "zzzzz",
+		"enable" : "True"
+	},
+	{
+		"file" : "adBlock",
+		"enable" : "True"
+	},
+	{
+		"file" : "appCodeName",
+		"enable" : "True"
+	},
+	{
+		"file" : "appName",
+		"enable" : "True"
+	},
+	{
+		"file" : "availableScreenResolution",
+		"enable" : "True"
+	},
+	{
+		"file" : "buildID",
+		"enable" : "True"
+	},
+	{
+		"file" : "canvas",
+		"enable" : "True"
+	},
+	{
+		"file" : "canvasPixels",
+		"enable" : "True"
+	},
+	{
+		"file" : "colorDepth",
+		"enable" : "True"
+	},
+	{
+		"file" : "cpuClass",
+		"enable" : "True"
+	},
+	{
+		"file" : "doNotTrack",
+		"enable" : "True"
+	},
+	{
+		"file" : "errorsGenerated",
+		"enable" : "True"
+	},
+	{
+		"file" : "hardwareConcurrency",
+		"enable" : "True"
+	},
+	{
+		"file" : "indexedDb",
+		"enable" : "True"
+	},
+	{
+		"file" : "language",
+		"enable" : "True"
+	},
+	{
+		"file" : "languages",
+		"enable" : "True"
+	},
+	{
+		"file" : "languagesFonts",
+		"enable" : "True"
+	},
+	{
+		"file" : "mathsConstants",
+		"enable" : "True"
+	},
+	{
+		"file" : "mimeTypes",
+		"enable" : "True"
+	},
+	{
+		"file" : "modernizr",
+		"enable" : "True"
+	},
+	{
+		"file" : "navigatorPrototype",
+		"enable" : "True"
+	},
+	{
+		"file" : "oscpu",
+		"enable" : "True"
+	},
+	{
+		"file" : "overwrittenObjects",
+		"enable" : "True"
+	},
+	{
+		"file" : "p1",
+		"enable" : "True"
+	},
+	{
+		"file" : "p2",
+		"enable" : "True"
+	},
+	{
+		"file" : "p3",
+		"enable" : "True"
+	},
+	{
+		"file" : "p4",
+		"enable" : "True"
+	},
+	{
+		"file" : "p5",
+		"enable" : "True"
+	},
+	{
+		"file" : "p6",
+		"enable" : "True"
+	},
+	{
+		"file" : "pixelRatio",
+		"enable" : "True"
+	},
+	{
+		"file" : "platform",
+		"enable" : "True"
+	},
+	{
+		"file" : "plugins",
+		"enable" : "True"
+	},
+	{
+		"file" : "pluginsUsingMimeTypes",
+		"enable" : "True"
+	},
+	{
+		"file" : "product",
+		"enable" : "True"
+	},
+	{
+		"file" : "productSub",
+		"enable" : "True"
+	},
+	{
+		"file" : "resOverflow",
+		"enable" : "True"
+	},
+	{
+		"file" : "screenResolution",
+		"enable" : "True"
+	},
+	{
+		"file" : "sessionStorage",
+		"enable" : "True"
+	},
+	{
+		"file" : "timezone",
+		"enable" : "True"
+	},
+	{
+		"file" : "touchSupport",
+		"enable" : "True"
+	},
+	{
+		"file" : "userAgent",
+		"enable" : "True"
+	},
+	{
+		"file" : "vendor",
+		"enable" : "True"
+	},
+	{
+		"file" : "vendorSub",
+		"enable" : "True"
+	},
+	{
+		"file" : "webGL",
+		"enable" : "True"
+	}
+]

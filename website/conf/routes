@@ -2,33 +2,31 @@
 # This file defines all application routes (Higher priority routes first)
 # ~~~~
 
-# Home page
+#JavaScript router
+GET         /assets/js/routes        controllers.Application.jsRoutes()
+# Map static resources from the /public folder to the /assets URL path
+GET         /assets/*file            controllers.Assets.at(path="/public", file)
 GET         /                        controllers.Application.home()
 GET         /fp                      controllers.FPController.fp()
 GET         /fpNoJs                  controllers.FPController.fpNoJs()
 GET         /viewFP                  controllers.FPController.viewFP()
 #GET         /stats                   controllers.StatsController.stats()
-GET         /history                 controllers.HistoryController.history()
+
 GET         /faq                     controllers.Application.faq()
 GET         /tools                   controllers.Application.tools()
 GET         /privacy                 controllers.Application.privacy()
 GET         /links                   controllers.Application.links()
 GET         /about                   controllers.Application.about()
-GET         /extension               controllers.ExtensionController.extension()
-GET         /timeline/:id            controllers.ExtensionController.timeline(id: String)
-GET         /timeline                controllers.ExtensionController.noTimeline()
-GET         /getNbEvol/:id           controllers.ExtensionController.getNbEvol(id: String)
+
 
 POST        /results2                controllers.FPController.addFingerprint()
 
 
 #POST        /percentages             controllers.StatsController.percentages()
-POST        /stats                   controllers.StatsController.statsTime()
-POST        /evolution/:id           controllers.ExtensionController.addFingerprintFromExtension(id: String)
-POST        /compareFpHistory        controllers.HistoryController.compareFpHistory()
+
 
 
 #JavaScript router
 GET         /assets/js/routes        controllers.Application.jsRoutes()
 # Map static resources from the /public folder to the /assets URL path
-GET         /assets/*file            controllers.Assets.at(path="/public", file)
+GET /assets/*file controllers.Assets.at(path="/public", file)

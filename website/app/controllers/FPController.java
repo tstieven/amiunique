@@ -10,7 +10,7 @@ import play.libs.Json;
 import play.mvc.Controller;
 import play.mvc.Http;
 import play.mvc.Result;
-import views.html.fp;
+import views.html.fp2;
 import views.html.fpNoJs;
 import views.html.results2;
 import views.html.viewFP;
@@ -32,7 +32,7 @@ public class FPController extends Controller {
     private static Integer nbTotal;
     //contains configuration value from application.conf.json
     private static HashMap<String, HashMap<String, String>> configHashMap = new HashMap<>();
-
+    private static List<String> configList = new ArrayList<>();
     private static final String configEnable = "enable";
     private static final String configComparison = "use in comparison";
     private static final String configOverview = "overview";
@@ -43,7 +43,6 @@ public class FPController extends Controller {
     private static final String configTitle = "display";
     private static final String configParse = "parse";
     private static final String configHashed = "hash";
-
 
 
     private static String getHeader(Http.Request request, String header) {
@@ -103,21 +102,21 @@ public class FPController extends Controller {
         }
 
         String name = getAttribute(myJson, "name");
-        HashMap<String, String> val= new HashMap<>();
-        val.put(configEnable,getAttribute(myJson,configEnable));
-        val.put(configComparison,getAttribute(myJson,configComparison));
-        val.put(configDetails,getAttribute(myJson,configDetails));
-        val.put(configGraph,getAttribute(myJson,configGraph));
-        val.put(configOverview,getAttribute(myJson,configOverview));
-        val.put(configParse,getAttribute(myJson,configParse));
-        val.put(configSentence1,getAttribute(myJson,configSentence1));
-        val.put(configSentence2,getAttribute(myJson,configSentence2));
-        val.put(configHashed,getAttribute(myJson,configHashed));
-        val.put(configTitle,getAttribute(myJson,configTitle));
+        HashMap<String, String> val = new HashMap<>();
+        val.put(configEnable, getAttribute(myJson, configEnable));
+        val.put(configComparison, getAttribute(myJson, configComparison));
+        val.put(configDetails, getAttribute(myJson, configDetails));
+        val.put(configGraph, getAttribute(myJson, configGraph));
+        val.put(configOverview, getAttribute(myJson, configOverview));
+        val.put(configParse, getAttribute(myJson, configParse));
+        val.put(configSentence1, getAttribute(myJson, configSentence1));
+        val.put(configSentence2, getAttribute(myJson, configSentence2));
+        val.put(configHashed, getAttribute(myJson, configHashed));
+        val.put(configTitle, getAttribute(myJson, configTitle));
         configHashMap.put(name, val);
     }
 
-    private static void listConfig(File path) {
+    private static void setConfigHashMap(File path) {
         File files[];
         int indentLevel = 0;
         files = path.listFiles();
@@ -135,7 +134,8 @@ public class FPController extends Controller {
     //everytime the server is turning on, this function has to be called in fpNoJs() or addFingerprint()
     public static void connection() {
         Map<String, Object> lu = Configuration.root().asMap();
-        listConfig(new File("conf/json"));
+        setConfigHashMap(new File("conf/json"));
+        setConfigList();
         try {
             HashMap<String, Object> mongoConfig = (HashMap<String, Object>) lu.get("mongo");
             String s = (String) mongoConfig.get("password");
@@ -218,14 +218,91 @@ public class FPController extends Controller {
         return query;
     }
 
+    private static void setConfigList() {
+        Iterator it = configHashMap.entrySet().iterator();
+        while (it.hasNext()) {
+            Map.Entry pair = (Map.Entry) it.next();
+            String name = (String) pair.getKey();
+            HashMap<String, String> config = (HashMap<String, String>) pair.getValue();
+            if (config.get(configEnable).equals("True")) {
+                configList.add(name);
+            }
+        }
+
+    }
+
     public static Result fp() {
+        if ((collection == null) || (configHashMap.isEmpty())) {
+            connection();
+        }
 
         if (request().cookies().get("amiunique") == null) {
             response().setCookie("amiunique", UUID.randomUUID().toString(), 60 * 60 * 24 * 120, "/", "amiunique.org", true, true);
             response().setCookie("tempReturningVis", "temp", 60 * 60 * 12);
         }
         System.out.println("fp");
-        return ok(fp.render(request()));
+        return ok(fp2.render(request()));
+
+    }
+
+    private static void setValueHashMap(HashMap<String, Double> percentages, HashMap<String, Percentages> overview, HashMap<String, SuperGraphValues> supergraph, HashMap<String, GraphValues> graph, HashMap<String, Detail> details, FpData data) {
+        Parsed parser = new Parsed();
+        FpStats stat = new FpStats();
+
+        Iterator it = percentages.entrySet().iterator();
+        while (it.hasNext()) {
+            Map.Entry pair = (Map.Entry) it.next();
+            String name = (String) pair.getKey();
+            Double value = ((Double) pair.getValue());
+            HashMap<String, String> config = configHashMap.get(name);
+
+            if (config.get(configParse).equals("True")) {
+               /* if (name=="userAgentHttp"){//(config[11].equals((String)"True")){
+                    //long a créer
+                    parser.parseOsBrowsers(name,(String)data.fpHashMap.get(name));
+                    String osName= parser.getOs();
+                    String osVersion= parser.getOsVersion();
+                    String browserName = parser.getBrowser();
+                    Str
+                    if (config[8].equals((String)"True")){
+                        overview.put(newName,new Percentages(newName,value,config[12],config[13]));
+                        overview.put(versionName,new Percentages(versionName,value,config[12],config[13]));
+                    }
+
+                    if (config[9].equals((String)"True")){
+                        details.put(newName,newPerc(newName));
+                        details.put(versionName,versionPercent(versionName));
+                    }
+                     if (config[10].equals((String)"True")){
+                        supergraph.put(newName, new GraphValues(newName,Json.toJson(stat.getSuperParseAttributStats(collection,name)),newName,versionName,config[7]));
+                    }
+
+                }else*/
+
+                String newName = parser.parseAttribute(name, (String) data.fpHashMap.get(name));
+
+                if (!(config.get(configOverview).equals("0"))) {
+                    overview.put(config.get(configOverview), new Percentages(newName, value, config.get(configSentence1), config.get(configSentence2)));
+                }
+                if (!(config.get(configDetails).equals("0"))) {
+                    details.put(config.get(configDetails), new Detail(name, newName, value));
+                }
+                if (!(config.get(configGraph).equals("0"))) {
+                    graph.put(config.get(configGraph), new GraphValues(newName, Json.toJson(stat.getParseAttributeStats(combinationStats, name, nbTotal)), name, config.get(configTitle)));
+                }
+            } else {
+
+                if (!(config.get(configOverview).equals("0"))) {
+                    overview.put(config.get(configOverview), new Percentages((String) data.fpHashMap.get(name), value, config.get(configSentence1), config.get(configSentence2)));
+                }
+                if (!(config.get(configDetails).equals("0"))) {
+                    details.put(config.get(configDetails), new Detail(name, (String) data.fpHashMap.get(name), value));
+                }
+                if (!(config.get(configGraph).equals("0"))) {
+                    graph.put(config.get(configGraph), new GraphValues((String) data.fpHashMap.get(name), Json.toJson(stat.getAttributeStats(combinationStats, name, nbTotal)), name, config.get(configTitle)));
+                }
+            }
+        }
     }
 
 
@@ -253,75 +330,23 @@ public class FPController extends Controller {
         HashMap<String, SuperGraphValues> supergraph = new HashMap<>();
         HashMap<String, GraphValues> graph = new HashMap<>();
         HashMap<String, Detail> details = new HashMap<>();
-        Parsed parser = new Parsed();
-        FpStats stat = new FpStats();
 
-        Iterator it = percentages.entrySet().iterator();
-        while (it.hasNext()) {
-            Map.Entry pair = (Map.Entry) it.next();
-            String name = (String) pair.getKey();
-            Double value = ((Double) pair.getValue());
-            HashMap<String, String> config = configHashMap.get(name);
+        setValueHashMap(percentages, overview, supergraph, graph, details, data);
 
-            if (config.get(configParse).equals("True")) {
-               /* if (name=="userAgentHttp"){//(config[11].equals((String)"True")){
-                    //long a créer
-                    parser.parseOsBrowsers(name,(String)data.fpHashMap.get(name));
-                    String osName= parser.getOs();
-                    String osVersion= parser.getOsVersion();
-                    String browserName = parser.getBrowser();
-                    Str
-                    if (config[8].equals((String)"True")){
-                        overview.put(newName,new Percentages(newName,value,config[12],config[13]));
-                        overview.put(versionName,new Percentages(versionName,value,config[12],config[13]));
-                    }
-
-                    if (config[9].equals((String)"True")){
-                        details.put(newName,newPerc(newName));
-                        details.put(versionName,versionPercent(versionName));
-                    }
-                     if (config[10].equals((String)"True")){
-                        supergraph.put(newName, new GraphValues(newName,Json.toJson(stat.getSuperParseAttributStats(collection,name)),newName,versionName,config[7]));
-                    }
-
-                }else*/
-
-                String newName = parser.parseAttribute(name, (String) data.fpHashMap.get(name));
-
-                if (!(config.get(configOverview).equals("0"))) {
-                    overview.put(config.get(configOverview), new Percentages(newName, value, config.get(configSentence1), config.get(configSentence2)));
-                }
-                if (!(config.get(configDetails).equals("0"))) {
-                    details.put(config.get(configDetails), new Detail(name, newName, value));
-                }
-                if (!(config.get(configGraph).equals("0"))) {
-                    graph.put(config.get(configGraph), new GraphValues(newName, Json.toJson(stat.getParseAttributeStats(combinationStats, name, nbTotal)), name, config.get(configTitle)));
-                }
-            } else {
-
-                if (!(config.get(configOverview).equals("0"))) {
-                    overview.put(config.get(configOverview), new Percentages((String) data.fpHashMap.get(name), value, config.get(configSentence1), config.get(configSentence2)));
-                }
-                if (!(config.get(configDetails).equals("0"))) {
-                    details.put(config.get(configDetails), new Detail(name, (String) data.fpHashMap.get(name), value));
-                }
-                if (!(config.get(configGraph).equals("0"))) {
-                    graph.put(config.get(configGraph), new GraphValues((String) data.fpHashMap.get(name), Json.toJson(stat.getAttributeStats(combinationStats, name, nbTotal)), name, config.get(configTitle)));
-                }
-            }
-        }
         return ok(fpNoJs.render((double) nbTotal, nbIdent, details, overview, graph, supergraph));
     }
 
     public static Result addFingerprint() {
+
         System.out.println("addFingerprint");
 
         //Get FP attributes (body content)
-        JsonNode json = request().body().asJson();
+        JsonNode json = (request().body().asJson()).get("jsonVal");
 
         if ((collection == null) || (configHashMap.isEmpty())) {
             connection();
         }
+
 
         FpData data = new FpData(json, configHashMap);
         data.saveInDataBases(collection, combinationStats, nbTotalDB);
@@ -338,68 +363,10 @@ public class FPController extends Controller {
         HashMap<String, SuperGraphValues> supergraph = new HashMap<>();
         HashMap<String, GraphValues> graph = new HashMap<>();
         HashMap<String, Detail> details = new HashMap<>();
-        Parsed parser = new Parsed();
-        FpStats stat = new FpStats();
 
-        Iterator it = percentages.entrySet().iterator();
-        while (it.hasNext()) {
-            Map.Entry pair = (Map.Entry) it.next();
-            String name = (String) pair.getKey();
-            Double value = ((Double) pair.getValue());
-            HashMap<String, String> config = configHashMap.get(name);
-
-            if (config.get(configParse).equals("True")) {
-               /* if (name=="userAgentHttp"){//(config[11].equals((String)"True")){
-                    //long a créer
-                    parser.parseOsBrowsers(name,(String)data.fpHashMap.get(name));
-                    String osName= parser.getOs();
-                    String osVersion= parser.getOsVersion();
-                    String browserName = parser.getBrowser();
-                    Str
-                    if (config[8].equals((String)"True")){
-                        overview.put(newName,new Percentages(newName,value,config[12],config[13]));
-                        overview.put(versionName,new Percentages(versionName,value,config[12],config[13]));
-                    }
-
-                    if (config[9].equals((String)"True")){
-                        details.put(newName,newPerc(newName));
-                        details.put(versionName,versionPercent(versionName));
-                    }
-                     if (config[10].equals((String)"True")){
-                        supergraph.put(newName, new GraphValues(newName,Json.toJson(stat.getSuperParseAttributStats(collection,name)),newName,versionName,config[7]));
-                    }
-
-                }else*/
-
-                String newName = parser.parseAttribute(name, (String) data.fpHashMap.get(name));
-
-                if (!(config.get(configOverview).equals("0"))) {
-                    overview.put(config.get(configOverview), new Percentages(newName, value, config.get(configSentence1), config.get(configSentence2)));
-                }
-                if (!(config.get(configDetails).equals("0"))) {
-                    details.put(config.get(configDetails), new Detail(name, newName, value));
-                }
-                if (!(config.get(configGraph).equals("0"))) {
-                    graph.put(config.get(configGraph), new GraphValues(newName, Json.toJson(stat.getParseAttributeStats(combinationStats, name, nbTotal)), name, config.get(configTitle)));
-                }
-            } else {
-
-                if (!(config.get(configOverview).equals("0"))) {
-                    overview.put(config.get(configOverview), new Percentages((String) data.fpHashMap.get(name), value, config.get(configSentence1), config.get(configSentence2)));
-                }
-                if (!(config.get(configDetails).equals("0"))) {
-                    details.put(config.get(configDetails), new Detail(name, (String) data.fpHashMap.get(name), value));
-                }
-                if (!(config.get(configGraph).equals("0"))) {
-                    graph.put(config.get(configGraph), new GraphValues((String) data.fpHashMap.get(name), Json.toJson(stat.getAttributeStats(combinationStats, name, nbTotal)), name, config.get(configTitle)));
-                }
-            }
-        }
-        //System.out.println(configHashMap);
-        System.out.println(data.fpHashMap);
+        setValueHashMap(percentages, overview, supergraph, graph, details, data);
 
         HashMap<String, Double> plugins = data.saveAndGetPluginsStatsInHashMap(combinationStats);
-
         return ok(results2.render((double) nbTotal, nbIdent, details, overview, graph, supergraph, plugins));
     }
 

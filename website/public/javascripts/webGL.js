@@ -12,8 +12,8 @@ try {
         var anisotropy, ext = gl.getExtension("EXT_texture_filter_anisotropic") || gl.getExtension("WEBKIT_EXT_texture_filter_anisotropic") || gl.getExtension("MOZ_EXT_texture_filter_anisotropic");
         return ext ? (anisotropy = gl.getParameter(ext.MAX_TEXTURE_MAX_ANISOTROPY_EXT), 0 === anisotropy && (anisotropy = 2), anisotropy) : null;
     };
-    var canvas = document.createElement("canvas");
-    var gl = canvas.getContext("webgl") || canvas.getContext("experimental-webgl");
+    var canvasJs = document.createElement("canvas");
+    var gl = canvasJs.getContext("webgl") || canvasJs.getContext("experimental-webgl");
     var result = [];
     var vShaderTemplate = "attribute vec2 attrVertex;varying vec2 varyinTexCoordinate;uniform vec2 uniformOffset;void main(){varyinTexCoordinate=attrVertex+uniformOffset;gl_Position=vec4(attrVertex,0,1);}";
     var fShaderTemplate = "precision mediump float;varying vec2 varyinTexCoordinate;void main() {gl_FragColor=vec4(varyinTexCoordinate,0,1);}";
@@ -104,8 +104,8 @@ try {
     result.push("webgl fragment shader low int precision rangeMax:" + gl.getShaderPrecisionFormat(gl.FRAGMENT_SHADER, gl.LOW_INT ).rangeMax);
     webGLData = result.join("§");
 
-    canvas = document.createElement('canvas');
-    var ctx = canvas.getContext("webgl") || canvas.getContext("experimental-webgl");
+    canvasJs = document.createElement('canvas');
+    var ctx = canvasJs.getContext("webgl") || canvasJs.getContext("experimental-webgl");
     if(ctx.getSupportedExtensions().indexOf("WEBGL_debug_renderer_info") >= 0) {
         webGLVendor = ctx.getParameter(ctx.getExtension('WEBGL_debug_renderer_info').UNMASKED_VENDOR_WEBGL);
         webGLRenderer = ctx.getParameter(ctx.getExtension('WEBGL_debug_renderer_info').UNMASKED_RENDERER_WEBGL);

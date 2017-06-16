@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Collecter fingerprint</title>
+<link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/mqcheck.css') }}">
+</head>
+<style>
+    a:visited{color: red;}
+</style>
+<body>
+    <h1>Collecte de votre empreinte</h1>
+    <p>
+       L'objectif est de collecter l'empreinte de votre navigateur lorsque vous utilisez une
+       extension de defense contre le fingerprinting.
+    </p>
+
+    <p>
+        Les extensions sont disponibles aux liens suivants:
+        <ul>
+            <li>
+                <a href="https://addons.mozilla.org/fr/firefox/addon/random-agent-spoofer/">Random
+                    Agent spoofer (Firefox)</a>
+            </li>
+            <li>
+                <a href="https://addons.mozilla.org/en-US/firefox/addon/user-agent-overrider/">User
+                    agent Overrider (Firefox)</a>
+            </li>
+            <li>
+                <a
+                    href="https://chrome.google.com/webstore/detail/user-agent-switcher-for-c/djflhoibgkdhkhhcedjiklpkjnoahfmg">User
+                    agent Switcher (Chrome)</a>
+            </li>
+            <li>
+                <a href="https://multiloginapp.com/canvasdefender-browser-extension/">Canvas
+                    Defender (liens en bas, Chrome et Firefox)</a>
+            </li>
+            <li>
+                <a
+                    href="https://chrome.google.com/webstore/detail/canvasfingerprintblock/ipmjngkmngdcdpmgmiebdmfbkcecdndc">Canvas
+                    Fingerprint Block (Chrome)</a>
+            </li>
+            <li>
+                <a href="https://addons.mozilla.org/fr/firefox/addon/canvasblocker/">Canvas Blocker
+                    (Firefox)</a>
+            </li>
+        </ul>
+    </p>
+
+    <p>
+        Dans le formulaire ci-dessous, selectionnez la contre mesure que vous utilisez (veuillez
+        n'en utiliser qu'une a la fois au maximum). De plus, n'hesitez pas a visiter plusieurs fois
+        la page avec la meme contre mesure lorsque celle-ci permet de changer la configuration (par
+        exemple changer le profil dans Random Agent Spoofer).
+    </p>
+
+    <p>
+        Pour les personnes sous Windows, Mac OS X ou iOS, une visite avec Internet Explorer ou Safari, meme
+        sans extension serait appreciee.
+    </p>
+
+    <h2>Attention</h2>
+    <p>
+        Pour certains extensions telles que Random Agent Spoofer, User Agent Overrider, ..., il est
+        necessaire de cliquer sur l'icone de l'extension et de choisir le user agent que l'on
+        souhaite utiliser.
+    </p>
+
+    <!-- <input type="text" id="countermeasure" placeholder="Contre mesure"></input> -->
+    <table>
+        <tr>
+            <th>Contre mesure</th>
+            <th>Navigateur</th>
+            <th>Version du navigateur</th>
+            <th>Systeme d'exploitation</th>
+        </tr>
+        <tr>
+            <td>
+                <select id="countermeasure-select">
+                    <option value="nothing">Aucune</option>
+                    <option value="RAS">Random Agent Spoofer</option>
+                    <option value="uaOverrider">User Agent Overrider</option>
+                    <option value="CanvasDef">CanvasDefender</option>
+                    <option value="CanvasFpBlock">Canvas Fingerprint Block</option>
+                    <option value="CanvasBlocker">Canvas Blocker</option>
+                    <option value="Brave">Brave</option>
+                    <option value="Blink">Blink</option>
+                </select>
+            </td>
+            <td>
+                <select id="browser-select">
+                    <option value="Chrome">Chrome</option>
+                    <option value="Firefox">Firefox</option>
+                    <option value="Safari">Safari</option>
+                    <option value="IE">Internet Explorer</option>
+                    <option value="Opera">Opera</option>
+                    <option value="Brave">Brave</option>
+                    <option value="Other">Other</option>
+                </select>
+            </td>
+            <td>
+                <input type="text" id="browser-version">
+            </td>
+            <td>
+                <select id="os-select">
+                    <option value="Linux">Linux</option>
+                    <option value="MacOSX">Mac OS X</option>
+                    <option value="Windows10">Windows 10</option>
+                    <option value="Windows8">Windows 8</option>
+                    <option value="Windows7">Windows 7</option>
+                    <option value="Android">Android</option>
+                    <option value="iOS">iOS</option>
+                    <option value="other">Autre</option>
+                </select>
+            </td>
+        </tr>
+    </table>
+    <br>
+    <button id="validate">Envoyer</button>
+    <br>
+    <br>
+    <br>
+    <p id="testmac1">
+        Test 1
+    </p>
+    <p id="testwinxp">
+        Test 2
+    </p>
+    <p id="testwinvis">
+        Test 3
+    </p>
+    <p id="testwin7">
+        Test 4
+    </p>
+    <p id="testwin8">
+        Test 4
+    </p>
+
+
+
+
+    <script src="{{ url_for('static', filename='js/audioSha1.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/languageDetector.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/modernizr.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/ua-parser.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/fonts_linked.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/public/test.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/moveElements.js') }}"></script>
+</body>
+</html>
